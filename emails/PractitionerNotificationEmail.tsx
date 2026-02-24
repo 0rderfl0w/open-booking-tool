@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   Html,
   Head,
@@ -11,8 +10,8 @@ import {
   Hr,
 } from '@react-email/components';
 import { format } from 'date-fns';
-import { toZonedTime } from 'date-fns-tz';
-import type { Booking, SessionType, Practitioner } from '../types/database';
+import { utcToZonedTime } from 'date-fns-tz';
+import type { Booking, SessionType, Practitioner } from '../src/types/database';
 
 interface PractitionerNotificationEmailProps {
   booking: Booking;
@@ -29,8 +28,8 @@ export function PractitionerNotificationEmail({
   const practitionerTimezone = practitioner.timezone;
   const startsAt = new Date(booking.starts_at);
   const endsAt = new Date(booking.ends_at);
-  const zonedStart = toZonedTime(startsAt, practitionerTimezone);
-  const zonedEnd = toZonedTime(endsAt, practitionerTimezone);
+  const zonedStart = utcToZonedTime(startsAt, practitionerTimezone);
+  const zonedEnd = utcToZonedTime(endsAt, practitionerTimezone);
 
   const formattedDate = format(zonedStart, 'EEEE, MMMM d, yyyy');
   const formattedTime = `${format(zonedStart, 'h:mm a')} - ${format(zonedEnd, 'h:mm a')}`;
@@ -111,8 +110,8 @@ export function PractitionerNotificationEmail({
 export const practitionerNotificationEmailText = (props: PractitionerNotificationEmailProps): string => {
   const { booking, sessionType, practitioner } = props;
   const practitionerTimezone = practitioner.timezone;
-  const zonedStart = toZonedTime(new Date(booking.starts_at), practitionerTimezone);
-  const zonedEnd = toZonedTime(new Date(booking.ends_at), practitionerTimezone);
+  const zonedStart = utcToZonedTime(new Date(booking.starts_at), practitionerTimezone);
+  const zonedEnd = utcToZonedTime(new Date(booking.ends_at), practitionerTimezone);
 
   return `
 New Booking Received

@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   Html,
   Head,
@@ -13,9 +12,9 @@ import {
   Img,
 } from '@react-email/components';
 import { format } from 'date-fns';
-import { toZonedTime } from 'date-fns-tz';
-import type { Booking, SessionType, Practitioner } from '../types/database';
-import { getAppUrl } from '../lib/constants';
+import { utcToZonedTime } from 'date-fns-tz';
+import type { Booking, SessionType, Practitioner } from '../src/types/database';
+import { getAppUrl } from '../src/lib/constants';
 
 interface ConfirmationEmailProps {
   booking: Booking;
@@ -36,8 +35,8 @@ export function ConfirmationEmail({
   const guestTimezone = booking.guest_timezone || 'UTC';
   const startsAt = new Date(booking.starts_at);
   const endsAt = new Date(booking.ends_at);
-  const zonedStart = toZonedTime(startsAt, guestTimezone);
-  const zonedEnd = toZonedTime(endsAt, guestTimezone);
+  const zonedStart = utcToZonedTime(startsAt, guestTimezone);
+  const zonedEnd = utcToZonedTime(endsAt, guestTimezone);
 
   const formattedDate = format(zonedStart, 'EEEE, MMMM d, yyyy');
   const formattedTime = `${format(zonedStart, 'h:mm a')} - ${format(zonedEnd, 'h:mm a')}`;
@@ -147,8 +146,8 @@ export function ConfirmationEmail({
 export const confirmationEmailText = (props: ConfirmationEmailProps): string => {
   const { booking, sessionType, practitioner } = props;
   const guestTimezone = booking.guest_timezone || 'UTC';
-  const zonedStart = toZonedTime(new Date(booking.starts_at), guestTimezone);
-  const zonedEnd = toZonedTime(new Date(booking.ends_at), guestTimezone);
+  const zonedStart = utcToZonedTime(new Date(booking.starts_at), guestTimezone);
+  const zonedEnd = utcToZonedTime(new Date(booking.ends_at), guestTimezone);
 
   return `
 Your booking with ${practitioner.display_name} is confirmed

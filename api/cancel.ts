@@ -4,6 +4,7 @@ import { cancelRequestSchema } from '../src/lib/validation';
 import { sanitizeText } from '../src/lib/sanitize';
 import { RATE_LIMITS } from '../src/lib/constants';
 import { sendCancellationEmail } from '../src/lib/email';
+import type { Booking, SessionType, Practitioner } from '../src/types/database';
 
 // Rate limiter for cancel endpoint
 const cancelRateLimiter = createRateLimiter(
@@ -161,7 +162,7 @@ export default async function handler(
       cancellation_reason: sanitizedReason,
     };
 
-    sendCancellationEmail(bookingForEmail.guest_email, { booking: bookingForEmail, sessionType: sessionTypeData, practitioner: practitionerData }).catch((err) => {
+    sendCancellationEmail(bookingForEmail.guest_email, { booking: bookingForEmail as unknown as Booking, sessionType: sessionTypeData as unknown as SessionType, practitioner: practitionerData as unknown as Practitioner }).catch((err) => {
       console.error('[Cancel] Failed to send cancellation email:', err);
     });
   }

@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   Html,
   Head,
@@ -12,9 +11,9 @@ import {
   Hr,
 } from '@react-email/components';
 import { format } from 'date-fns';
-import { toZonedTime } from 'date-fns-tz';
-import type { Booking, SessionType, Practitioner } from '../types/database';
-import { getAppUrl } from '../lib/constants';
+import { utcToZonedTime } from 'date-fns-tz';
+import type { Booking, SessionType, Practitioner } from '../src/types/database';
+import { getAppUrl } from '../src/lib/constants';
 
 interface CancellationEmailProps {
   booking: Booking;
@@ -33,7 +32,7 @@ export function CancellationEmail({
   // Format the original booking time in the guest's timezone
   const guestTimezone = booking.guest_timezone || 'UTC';
   const startsAt = new Date(booking.starts_at);
-  const zonedStart = toZonedTime(startsAt, guestTimezone);
+  const zonedStart = utcToZonedTime(startsAt, guestTimezone);
 
   const formattedDate = format(zonedStart, 'EEEE, MMMM d, yyyy');
   const formattedTime = format(zonedStart, 'h:mm a');
@@ -101,7 +100,7 @@ export function CancellationEmail({
 export const cancellationEmailText = (props: CancellationEmailProps): string => {
   const { booking, sessionType, practitioner } = props;
   const guestTimezone = booking.guest_timezone || 'UTC';
-  const zonedStart = toZonedTime(new Date(booking.starts_at), guestTimezone);
+  const zonedStart = utcToZonedTime(new Date(booking.starts_at), guestTimezone);
 
   return `
 Booking Cancelled
