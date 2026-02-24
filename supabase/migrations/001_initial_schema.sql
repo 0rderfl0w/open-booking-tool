@@ -147,10 +147,11 @@ CREATE TRIGGER trg_sync_email
 -- ============================================================================
 
 -- Prevents any overlapping confirmed bookings for the same practitioner
+-- Uses starts_at/ends_at range only (buffer is enforced at application level in slot calculation)
 ALTER TABLE bookings ADD CONSTRAINT bookings_no_overlap
   EXCLUDE USING gist (
     practitioner_id WITH =,
-    tstzrange(starts_at, ends_at + (buffer_minutes * interval '1 minute'), '[)') WITH &&
+    tstzrange(starts_at, ends_at, '[)') WITH &&
   )
   WHERE (status != 'cancelled');
 
