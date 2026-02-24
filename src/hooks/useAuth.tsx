@@ -97,8 +97,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (!user && !onPublicPath && location.pathname !== '/') {
       navigate('/login', { replace: true });
+    } else if (user && !practitioner && location.pathname.startsWith('/dashboard')) {
+      navigate('/onboarding', { replace: true });
     }
-  }, [user, loading, location.pathname, navigate]);
+  }, [user, practitioner, loading, location.pathname, navigate]);
 
   async function signIn(email: string, password: string) {
     const { error } = await supabase.auth.signInWithPassword({
@@ -106,7 +108,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password,
     });
     if (error) throw error;
-    navigate('/dashboard');
+
+    // Check if practitioner profile exists — if not, send to onboarding
+    const { data: existingPractitioner } = await supabase
+      .from('practitioners')
+      .select('id')
+      .eq('user_id', (await supabase.auth.getUser()).data.user!.id)
+      .single();
+
+    navigate(existingPractitioner ? '/dashboard' : '/onboarding');
   }
 
   async function signUp(email: string, password: string) {
