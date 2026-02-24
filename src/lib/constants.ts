@@ -13,10 +13,10 @@ export const BOOKING_TOKEN_LENGTH = 12;
 
 /** Rate limits (requests per window) */
 export const RATE_LIMITS = {
-  book: { limit: 10, window: '1m' },
-  cancel: { limit: 5, window: '1m' },
-  slots: { limit: 30, window: '1m' },
-  ics: { limit: 20, window: '1h' },
+  book: { limit: 10, window: '1 m' },
+  cancel: { limit: 5, window: '1 m' },
+  slots: { limit: 30, window: '1 m' },
+  ics: { limit: 20, window: '1 h' },
   emailPerDay: 3, // max bookings per guest email per day
 } as const;
 
