@@ -56,7 +56,7 @@ export default function DashboardBookings() {
 
   // Fetch bookings
   useEffect(() => {
-    if (!user) return;
+    if (!user || !practitioner?.id) return;
 
     async function fetchBookings() {
       setLoading(true);
