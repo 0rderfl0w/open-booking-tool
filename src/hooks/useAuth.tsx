@@ -34,6 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [practitioner, setPractitioner] = useState<Practitioner | null>(null);
+  const [practitionerChecked, setPractitionerChecked] = useState(false);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
@@ -50,6 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Error fetching practitioner:', error);
     }
     setPractitioner(data);
+    setPractitionerChecked(true);
     return data;
   }
 
@@ -97,10 +99,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (!user && !onPublicPath && location.pathname !== '/') {
       navigate('/login', { replace: true });
-    } else if (user && !practitioner && location.pathname.startsWith('/dashboard')) {
+    }
+  }, [user, loading, location.pathname, navigate]);
+
+  // Redirect to onboarding if authenticated but no practitioner profile
+  useEffect(() => {
+    if (loading || !practitionerChecked) return;
+    if (user && practitioner === null && location.pathname.startsWith('/dashboard')) {
       navigate('/onboarding', { replace: true });
     }
-  }, [user, practitioner, loading, location.pathname, navigate]);
+  }, [user, practitioner, practitionerChecked, loading, location.pathname, navigate]);
 
   async function signIn(email: string, password: string) {
     const { error } = await supabase.auth.signInWithPassword({
@@ -129,6 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function signOut() {
     await supabase.auth.signOut();
     setPractitioner(null);
+    setPractitionerChecked(false);
     navigate('/login');
   }
 
