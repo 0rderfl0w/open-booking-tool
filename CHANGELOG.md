@@ -1,7 +1,33 @@
 # Changelog
 
 ## 2026-02-24
-- Phase 1 implementation complete: 74 TypeScript errors → 0. All API routes, booking wizard, dashboard, email/ICS committed (Razor & Blade)
+
+### Phase 1 — What's Done
+- Project scaffold: Vite + React 19 + TypeScript + Tailwind CSS
+- Supabase migration: all tables, triggers, indexes, constraints, RLS
+- Shared types, Zod validation schemas, constants
+- Slot calculation engine (availability + date overrides + bookings)
+- API routes: health, slots, book, cancel, booking details, ICS download
+- Rate limiting middleware (Upstash, graceful fallback when unconfigured)
+- Turnstile bot protection (graceful fallback when unconfigured)
+- XSS sanitization for user-provided text
+- Reserved username validation
+- Public booking page (`/book/:username`) — 5-step wizard with timezone detection
+- Booking confirmation page (`/booking/:token`) with cancel + ICS download
+- Email integration: Resend SDK + React Email templates (confirmation, cancellation, practitioner notification)
+- ICS calendar invite generation via ical-generator
+- Dashboard: bookings, availability (multi-window), session types (CRUD), settings
+- Onboarding flow: username → profile → session type → availability
+- Login/signup pages with Supabase PKCE auth
+- Empty state components
+- 0 TypeScript errors, clean build
+
+### Phase 1 — Deferred (needs account setup)
+- **Sentry** — error tracking, needs sentry.io project + DSN
+- **Cloudflare Turnstile** — bot protection, needs Cloudflare site key + secret (code is in place, just no keys)
+- **Upstash Redis** — rate limiting backend, needs upstash.com database + credentials (code is in place, just no keys)
+
+### Implementation Notes
 - Fixed DashboardAvailability.tsx: `as DayData` casts, removed unused imports, explicit full-object construction in setWeekData callbacks (Razor & Blade)
 
 ## 2026-02-24
