@@ -2,6 +2,17 @@
 
 ## 2026-02-24
 
+### Smoke Test Results (Razor & Blade)
+- Login: ✅ PASS - Email/password sign-in works
+- Dashboard: ⚠️ PARTIAL - Shows loading states due to missing practitioner record (406 error on Supabase query)
+- Session Types: ❌ FAIL - Empty main area, requires practitioner ID
+- Availability: ❌ FAIL - Empty main area, requires practitioner data
+- Settings: ❌ FAIL - Shows "Loading..." due to null practitioner
+- Onboarding: ⚠️ PARTIAL - Accessible but username availability check hangs
+- Public Booking Page: ❌ NOT TESTED - No practitioner record exists for test user
+
+**Root Cause:** Test user has no practitioner record in database. App queries practitioner with `.single()` which returns 406 when no rows exist.
+
 ### Phase 1 — What's Done
 - Project scaffold: Vite + React 19 + TypeScript + Tailwind CSS
 - Supabase migration: all tables, triggers, indexes, constraints, RLS

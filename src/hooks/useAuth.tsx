@@ -108,15 +108,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password,
     });
     if (error) throw error;
-
-    // Check if practitioner profile exists — if not, send to onboarding
-    const { data: existingPractitioner } = await supabase
-      .from('practitioners')
-      .select('id')
-      .eq('user_id', (await supabase.auth.getUser()).data.user!.id)
-      .single();
-
-    navigate(existingPractitioner ? '/dashboard' : '/onboarding');
+    // Redirect logic handled by useEffect — it checks practitioner state
+    navigate('/dashboard');
   }
 
   async function signUp(email: string, password: string) {
