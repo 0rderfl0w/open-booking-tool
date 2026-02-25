@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-02-25 (late)
+
+### Repo Setup (Razor & Blade)
+- Created GitHub repo: https://github.com/0rderfl0w/open-booking-tool
+- Added README.md with full setup guide, project structure, embed docs, roadmap
+- Added MIT LICENSE (copyright: Build to Own Club)
+- Pushed all commits to GitHub
+
 ## 2026-02-25
 
 ### Embed Widget — Phases 1-3 (Razor & Blade)
