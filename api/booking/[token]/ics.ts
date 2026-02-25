@@ -20,7 +20,7 @@ export default async function handler(
   }
 
   // Check body size (max 10KB)
-  if (isBodyTooLarge(req)) {
+  if (req.body && isBodyTooLarge(req.body)) {
     return apiError(res, 413, 'INVALID_INPUT', 'Request body too large');
   }
 

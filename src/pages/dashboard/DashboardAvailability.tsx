@@ -66,17 +66,17 @@ export default function DashboardAvailability() {
 
   // Fetch data
   useEffect(() => {
-    if (!practitioner?.id) return;
+    const pid = practitioner?.id;
+    if (!pid) return;
 
     async function fetchData() {
-      if (!practitioner) return;
       setLoading(true);
 
       // Fetch weekly availability
       const { data: availData } = await supabase
         .from('availability')
         .select('*')
-        .eq('practitioner_id', practitioner.id)
+        .eq('practitioner_id', pid)
         .eq('is_active', true)
         .order('day_of_week');
 
@@ -84,7 +84,7 @@ export default function DashboardAvailability() {
       const { data: overrideData } = await supabase
         .from('date_overrides')
         .select('*')
-        .eq('practitioner_id', practitioner.id)
+        .eq('practitioner_id', pid)
         .gte('date', new Date().toISOString().split('T')[0])
         .order('date');
 

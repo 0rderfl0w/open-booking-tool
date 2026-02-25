@@ -23,7 +23,7 @@ export default async function handler(
   }
 
   // Check body size (max 10KB)
-  if (isBodyTooLarge(req)) {
+  if (req.body && isBodyTooLarge(req.body)) {
     return apiError(res, 413, 'INVALID_INPUT', 'Request body too large');
   }
 
@@ -134,8 +134,7 @@ export default async function handler(
     return apiError(res, 500, 'INTERNAL_ERROR', 'Failed to cancel booking');
   }
 
-  // Email sending is stubbed - would send cancellation emails here
-  console.log(`[Cancel] Cancellation email would be sent for booking ${booking_token}`);
+  console.log(`[Cancel] Processing cancellation for booking ${booking_token}`);
 
   // Send cancellation email to guest (async - don't block response)
   // We need to reconstruct the booking, sessionType, and practitioner objects from the joined query

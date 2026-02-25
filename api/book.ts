@@ -5,8 +5,8 @@ import { sendConfirmationEmail, sendPractitionerNotificationEmail } from '../src
 import { RATE_LIMITS, BOOKING_TOKEN_LENGTH } from '../src/lib/constants';
 
 // Initialize Supabase client
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const supabaseUrl = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? '';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // Rate limiting (simplified - in production use @upstash/ratelimit)
@@ -38,7 +38,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   // Rate limit check
-  const clientIp = req.headers['x-forwarded-for'] as string || req.socket.remoteAddress || 'unknown';
+  const clientIp = req.headers['x-forwarded-for'] as string || req.socket?.remoteAddress || 'unknown';
   if (!checkRateLimit(clientIp, RATE_LIMITS.book.limit, 60000)) {
     return res.status(429).json({
       error: { code: 'RATE_LIMITED', message: 'Too many requests. Please try again later.' },

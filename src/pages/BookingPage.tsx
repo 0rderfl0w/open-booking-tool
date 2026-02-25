@@ -6,7 +6,7 @@ import { useReducer, useEffect, useRef, useCallback } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
-import { supabase } from '@/lib/supabase';
+import { supabasePublic } from '@/lib/supabase';
 import { WIZARD_STEPS, type WizardStep } from '@/lib/constants';
 import { useTimezone } from '@/hooks/useTimezone';
 import { WizardProgress } from '@/components/booking/WizardProgress';
@@ -26,6 +26,8 @@ interface WizardState {
   practitioner: PublicPractitioner | null;
   practitionerLoading: boolean;
   practitionerError: string | null;
+  // Availability — which days of week (0-6) have slots
+  availableDays: Set<number>;
   // Session types
   sessionTypes: SessionType[];
   selectedSessionType: SessionType | null;
@@ -49,7 +51,7 @@ interface WizardState {
 
 type WizardAction =
   | { type: 'PRACTITIONER_LOADING' }
-  | { type: 'PRACTITIONER_LOADED'; practitioner: PublicPractitioner; sessionTypes: SessionType[] }
+  | { type: 'PRACTITIONER_LOADED'; practitioner: PublicPractitioner; sessionTypes: SessionType[]; availableDays: Set<number> }
   | { type: 'PRACTITIONER_ERROR'; message: string }
   | { type: 'SELECT_SESSION_TYPE'; sessionType: SessionType }
   | { type: 'SELECT_DATE'; date: Date; dateStr: string }
@@ -74,6 +76,7 @@ function makeInitialState(timezone: string): WizardState {
     practitioner: null,
     practitionerLoading: true,
     practitionerError: null,
+    availableDays: new Set<number>(),
     sessionTypes: [],
     selectedSessionType: null,
     selectedDate: null,
@@ -113,6 +116,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
         practitionerLoading: false,
         practitioner: action.practitioner,
         sessionTypes: action.sessionTypes,
+        availableDays: action.availableDays,
         practitionerError: null,
       };
 
@@ -217,77 +221,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
   }
 }
 
-// ─── Turnstile ────────────────────────────────────────────────────────────────
-
-declare global {
-  interface Window {
-    turnstile?: {
-      render: (
-        container: HTMLElement,
-        options: {
-          sitekey: string;
-          callback: (token: string) => void;
-          'expired-callback': () => void;
-          'error-callback': () => void;
-        }
-      ) => string;
-      reset: (widgetId: string) => void;
-    };
-  }
-}
-
-function TurnstileWidget({ onToken }: { onToken: (token: string | null) => void }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const widgetIdRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    const siteKey = (import.meta.env as Record<string, string>)['VITE_TURNSTILE_SITE_KEY'];
-    if (!siteKey || !containerRef.current) return;
-
-    const initWidget = () => {
-      if (!containerRef.current || !window.turnstile) return;
-      widgetIdRef.current = window.turnstile.render(containerRef.current, {
-        sitekey: siteKey,
-        callback: (token: string) => onToken(token),
-        'expired-callback': () => onToken(null),
-        'error-callback': () => onToken(null),
-      });
-    };
-
-    if (window.turnstile) {
-      initWidget();
-    } else {
-      // Load script if not present
-      const existing = document.getElementById('turnstile-script');
-      if (!existing) {
-        const script = document.createElement('script');
-        script.id = 'turnstile-script';
-        script.src =
-          'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-        script.async = true;
-        script.onload = initWidget;
-        document.head.appendChild(script);
-      } else {
-        // Script already loading; poll for readiness
-        const interval = setInterval(() => {
-          if (window.turnstile) {
-            clearInterval(interval);
-            initWidget();
-          }
-        }, 100);
-        return () => clearInterval(interval);
-      }
-    }
-  }, [onToken]);
-
-  return (
-    <div
-      ref={containerRef}
-      className="flex justify-center my-4"
-      aria-label="Security challenge"
-    />
-  );
-}
+// Turnstile (bot protection) deferred to Phase 2
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -314,7 +248,7 @@ export default function BookingPage() {
   );
 
   const stepHeadingRef = useRef<HTMLHeadingElement>(null);
-  const turnstileTokenRef = useRef<string | null>(null);
+  // Turnstile deferred to Phase 2
 
   // Move focus to heading when step changes
   useEffect(() => {
@@ -331,7 +265,7 @@ export default function BookingPage() {
     (async () => {
       try {
         // Fetch practitioner from public view
-        const { data: practitioner, error: pErr } = await supabase
+        const { data: practitioner, error: pErr } = await supabasePublic
           .from('public_practitioners')
           .select('*')
           .eq('username', username)
@@ -347,17 +281,24 @@ export default function BookingPage() {
           return;
         }
 
-        // Fetch active session types
-        const { data: sessionTypes, error: stErr } = await supabase
-          .from('session_types')
-          .select('*')
-          .eq('practitioner_id', practitioner.id)
-          .eq('is_active', true)
-          .order('sort_order', { ascending: true });
+        // Fetch active session types + availability in parallel
+        const [stResult, availResult] = await Promise.all([
+          supabasePublic
+            .from('session_types')
+            .select('*')
+            .eq('practitioner_id', practitioner.id)
+            .eq('is_active', true)
+            .order('sort_order', { ascending: true }),
+          supabasePublic
+            .from('availability')
+            .select('day_of_week')
+            .eq('practitioner_id', practitioner.id)
+            .eq('is_active', true),
+        ]);
 
         if (cancelled) return;
 
-        if (stErr) {
+        if (stResult.error) {
           dispatch({
             type: 'PRACTITIONER_ERROR',
             message: 'Failed to load session types. Please try again.',
@@ -365,10 +306,15 @@ export default function BookingPage() {
           return;
         }
 
+        const availableDays = new Set<number>(
+          (availResult.data ?? []).map((r: { day_of_week: number }) => r.day_of_week)
+        );
+
         dispatch({
           type: 'PRACTITIONER_LOADED',
           practitioner: practitioner as PublicPractitioner,
-          sessionTypes: (sessionTypes ?? []) as SessionType[],
+          sessionTypes: (stResult.data ?? []) as SessionType[],
+          availableDays,
         });
       } catch {
         if (!cancelled) {
@@ -460,12 +406,6 @@ export default function BookingPage() {
       !username
     ) return;
 
-    const token = turnstileTokenRef.current;
-    if (!token) {
-      dispatch({ type: 'SUBMIT_ERROR', message: 'Please complete the security challenge.' });
-      return;
-    }
-
     dispatch({ type: 'SUBMIT_START' });
 
     try {
@@ -480,7 +420,7 @@ export default function BookingPage() {
           guest_email: state.guestDetails.guestEmail,
           guest_timezone: state.guestDetails.timezone,
           notes: state.guestDetails.notes || undefined,
-          turnstile_token: token,
+          // turnstile_token omitted — Turnstile deferred to Phase 2
         }),
       });
 
@@ -646,7 +586,12 @@ export default function BookingPage() {
                   dateStr: formatDateToISO(date),
                 });
               }}
-              disabled={[{ before: minDate }, { after: maxDate }]}
+              disabled={[
+                { before: minDate },
+                { after: maxDate },
+                // Disable days of week without availability
+                (date: Date) => !state.availableDays.has(date.getDay()),
+              ]}
               fromMonth={minDate}
               toMonth={maxDate}
               className="border border-gray-200 rounded-xl p-2"
@@ -718,12 +663,6 @@ export default function BookingPage() {
               guestDetails={state.guestDetails}
               practitionerDisplayName={state.practitioner.display_name}
             />
-
-            <div className="mt-6">
-              <TurnstileWidget
-                onToken={(t) => { turnstileTokenRef.current = t; }}
-              />
-            </div>
 
             {state.submitError && (
               <div

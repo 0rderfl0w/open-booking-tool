@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/lib/supabase';
+import { supabase, supabasePublic } from '@/lib/supabase';
 import { usernameSchema, RESERVED_USERNAMES } from '@/lib/validation.ts';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -218,12 +218,23 @@ export default function OnboardingPage() {
     if (usernameDebounceRef.current) clearTimeout(usernameDebounceRef.current);
     setUsernameStatus('checking');
     usernameDebounceRef.current = setTimeout(async () => {
-      const { data } = await supabase
-        .from('practitioners')
-        .select('id')
-        .eq('username', val)
-        .maybeSingle();
-      setUsernameStatus(data ? 'taken' : 'available');
+      try {
+        const { data, error } = await supabasePublic
+          .from('public_practitioners')
+          .select('id')
+          .eq('username', val)
+          .maybeSingle();
+        if (error) {
+          console.error('Username check error:', error);
+          // Fall through as available so user isn't blocked — DB unique constraint is the real guard
+          setUsernameStatus('available');
+          return;
+        }
+        setUsernameStatus(data ? 'taken' : 'available');
+      } catch (err) {
+        console.error('Username check failed:', err);
+        setUsernameStatus('available');
+      }
     }, 500);
   }
 
@@ -321,10 +332,10 @@ export default function OnboardingPage() {
         const ext = profileData.photo_file.name.split('.').pop();
         const path = `${user.id}/avatar.${ext}`;
         const { error: uploadError } = await supabase.storage
-          .from('avatars')
+          .from('booking-avatars')
           .upload(path, profileData.photo_file, { upsert: true });
         if (uploadError) throw new Error(`Photo upload failed: ${uploadError.message}`);
-        const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path);
+        const { data: urlData } = supabase.storage.from('booking-avatars').getPublicUrl(path);
         photo_url = urlData.publicUrl;
       }
 

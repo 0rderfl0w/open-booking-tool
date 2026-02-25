@@ -21,8 +21,8 @@ export default async function handler(
     return apiError(res, 405, 'INVALID_INPUT', 'Method not allowed');
   }
 
-  // Check body size
-  if (isBodyTooLarge(req)) {
+  // Check body size (GET requests won't have a body, but guard anyway)
+  if (req.body && isBodyTooLarge(req.body)) {
     return apiError(res, 413, 'INVALID_INPUT', 'Request body too large');
   }
 

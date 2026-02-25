@@ -193,6 +193,7 @@ CREATE VIEW public_practitioners AS
   FROM practitioners;
 
 GRANT SELECT ON public_practitioners TO anon;
+GRANT SELECT ON public_practitioners TO authenticated;
 
 -- ============================================================================
 -- RLS Policies
