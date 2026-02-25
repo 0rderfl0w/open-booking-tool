@@ -52,6 +52,11 @@ function shimResponse(res: ServerResponse) {
       res.end();
       return resp;
     },
+    send(body?: string | Buffer) {
+      if (!res.headersSent) res.writeHead(_status);
+      res.end(body);
+      return resp;
+    },
     end(body?: string) {
       res.writeHead(_status);
       res.end(body);
