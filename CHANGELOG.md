@@ -2,6 +2,14 @@
 
 ## 2026-02-25
 
+### Dashboard Polish (Razor & Blade)
+- Fix: onboarding banner now queries real data (session_types + availability counts) instead of hardcoded `false` — banner disappears when setup is complete
+- Fix: GoTrueClient dual-instance warning resolved via separate `storageKey` on `supabasePublic` client
+- Removed dead code: `src/lib/ics.ts` (unused, real ICS impl is in `api/booking/[token]/ics.ts`)
+- Confirmed NOT a bug: "Username set" always checked is correct per spec (username required at signup)
+- Confirmed already built: embed code UI in Settings (inline/modal toggle, color picker, copy button)
+- Confirmed already built: bookings empty state with "Share booking page" CTA
+
 ### Bug Fixes (Razor & Blade)
 - Fix: `isBodyTooLarge()` in slots, cancel, and ICS endpoints passed full `req` object instead of `req.body` — caused `Converting circular structure to JSON` errors
 - Fix: `book.ts` used `req.socket.remoteAddress` without optional chaining — caused crash when socket undefined
