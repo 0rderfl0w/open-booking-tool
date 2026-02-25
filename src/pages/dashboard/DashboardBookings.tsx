@@ -56,7 +56,11 @@ export default function DashboardBookings() {
 
   // Fetch bookings
   useEffect(() => {
-    if (!user || !practitioner?.id) return;
+    if (!user || !practitioner?.id) {
+      // If auth context hasn't loaded practitioner yet, don't stay stuck on spinner forever
+      const timeout = setTimeout(() => setLoading(false), 3000);
+      return () => clearTimeout(timeout);
+    }
 
     async function fetchBookings() {
       setLoading(true);
