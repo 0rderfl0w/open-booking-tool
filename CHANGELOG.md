@@ -2,6 +2,22 @@
 
 ## 2026-02-25
 
+### Embed Widget — Phases 1-3 (Razor & Blade)
+- Phase 1: Extracted BookingWizard component from BookingPage — wizard logic now reusable
+  - Props: `username`, `embed`, `accentColor`, `preSelectedSessionTypeId`, `onComplete`, `onClose`, `onError`
+  - BookingPage.tsx now wraps BookingWizard with full page chrome
+- Phase 2: Built EmbedPage at `/embed/:username` — iframe-optimized booking flow
+  - Reads `?accent`, `?session`, `?parentOrigin` query params
+  - Emits postMessages: `booking:loaded`, `booking:resize`, `booking:complete`, `booking:close`, `booking:error`
+  - ResizeObserver on content wrapper for dynamic height
+  - Security: omits bookingToken from complete event if parentOrigin unknown
+- Phase 3: Created `public/embed.js` — vanilla JS embed script
+  - Inline mode: iframe with loading skeleton, 10s timeout fallback
+  - Modal mode: trigger button, fullscreen overlay, iOS scroll lock, Escape/backdrop close
+  - MutationObserver for SPA support
+  - Public API: `BookingWidget.open()`, `BookingWidget.close()`, `BookingWidget.on()`, `BookingWidget.off()`
+- All phases pass `npx tsc --noEmit` with zero errors
+
 ### Dashboard Polish (Razor & Blade)
 - Fix: onboarding banner now queries real data (session_types + availability counts) instead of hardcoded `false` — banner disappears when setup is complete
 - Fix: GoTrueClient dual-instance warning resolved via separate `storageKey` on `supabasePublic` client
