@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 import { nanoid } from 'nanoid';
 import { sendConfirmationEmail, sendPractitionerNotificationEmail } from '../src/lib/email';
 import { RATE_LIMITS, BOOKING_TOKEN_LENGTH } from '../src/lib/constants';
+import { createCalendarEvent } from '../src/lib/google-calendar';
+import type { Booking, SessionType, Practitioner } from '../src/types/database';
 
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? '';
@@ -175,7 +177,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.error('Failed to send practitioner notification:', err);
     });
 
-    // 9. Return success
+    // 9. Create Google Calendar event (async - don't block response)
+    if (practitioner.google_calendar_connected) {
+      createCalendarEvent(
+        practitioner.id,
+        booking as Booking,
+        sessionType as SessionType,
+        practitioner as Practitioner,
+        supabase,
+      ).catch((err) => {
+        console.error('[Google Calendar] Failed to create event:', err);
+      });
+    }
+
+    // 10. Return success
     return res.status(201).json({
       booking_token: booking.booking_token,
       booking_url: `${appUrl}/booking/${booking.booking_token}`,

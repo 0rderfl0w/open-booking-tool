@@ -7,6 +7,12 @@ import { supabase } from '@/lib/supabase';
 import { getAppUrl } from '@/lib/constants';
 import { DEFAULT_ACCENT_COLOR } from '@/lib/constants';
 
+interface CalendarOption {
+  id: string;
+  summary: string;
+  primary: boolean;
+}
+
 export default function DashboardSettings() {
   const { practitioner, refreshPractitioner } = useAuth();
   const [displayName, setDisplayName] = useState('');
@@ -22,7 +28,125 @@ export default function DashboardSettings() {
   const [accentColor, setAccentColor] = useState(DEFAULT_ACCENT_COLOR);
   const [copyFeedback, setCopyFeedback] = useState(false);
 
+  // Google Calendar state
+  const [calendars, setCalendars] = useState<CalendarOption[]>([]);
+  const [selectedCalendarId, setSelectedCalendarId] = useState<string>('');
+  const [calendarLoading, setCalendarLoading] = useState(false);
+  const [calendarStatus, setCalendarStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
   const copyRef = useRef<HTMLTextAreaElement>(null);
+
+  // Check URL params for calendar connection status
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get('calendar');
+    const reason = params.get('reason');
+
+    if (status === 'connected') {
+      setCalendarStatus({ type: 'success', message: 'Google Calendar connected successfully!' });
+      refreshPractitioner();
+    } else if (status === 'error') {
+      setCalendarStatus({ type: 'error', message: reason ? decodeURIComponent(reason) : 'Failed to connect Google Calendar' });
+    }
+
+    // Clear URL params
+    if (status) {
+      window.history.replaceState({}, '', '/dashboard/settings');
+    }
+  }, [refreshPractitioner]);
+
+  // Fetch calendars when practitioner is loaded and connected
+  useEffect(() => {
+    if (practitioner?.google_calendar_connected) {
+      fetchCalendars();
+    }
+  }, [practitioner?.google_calendar_connected]);
+
+  async function fetchCalendars() {
+    setCalendarLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+
+      const res = await fetch('/api/google/calendars', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const data = await res.json();
+
+      if (res.ok && data.calendars) {
+        setCalendars(data.calendars);
+        const primary = data.calendars.find((c: CalendarOption) => c.primary);
+        if (primary) setSelectedCalendarId(primary.id);
+      }
+    } catch (err) {
+      console.error('Failed to fetch calendars:', err);
+    }
+    setCalendarLoading(false);
+  }
+
+  async function handleConnectGoogleCalendar() {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setCalendarStatus({ type: 'error', message: 'Not authenticated' });
+        return;
+      }
+
+      const res = await fetch('/api/google/connect', {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        credentials: 'include',
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        setCalendarStatus({ type: 'error', message: data.error?.message || 'Failed to connect' });
+        return;
+      }
+
+      const { url } = await res.json();
+      window.location.href = url;
+    } catch (err) {
+      setCalendarStatus({ type: 'error', message: 'Failed to initiate Google connection' });
+    }
+  }
+
+  async function handleDisconnectGoogleCalendar() {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+
+      const res = await fetch('/api/google/disconnect', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+
+      if (res.ok) {
+        setCalendars([]);
+        setSelectedCalendarId('');
+        await refreshPractitioner();
+        setCalendarStatus({ type: 'success', message: 'Google Calendar disconnected' });
+      } else {
+        setCalendarStatus({ type: 'error', message: 'Failed to disconnect' });
+      }
+    } catch (err) {
+      setCalendarStatus({ type: 'error', message: 'Failed to disconnect' });
+    }
+  }
+
+  async function handleSelectCalendar(calendarId: string) {
+    setSelectedCalendarId(calendarId);
+    if (!practitioner) return;
+
+    const { error } = await supabase
+      .from('practitioner_credentials')
+      .update({ google_calendar_id: calendarId })
+      .eq('practitioner_id', practitioner.id);
+
+    if (error) {
+      setCalendarStatus({ type: 'error', message: 'Failed to save calendar selection' });
+    }
+  }
 
   useEffect(() => {
     if (practitioner) {
@@ -274,11 +398,73 @@ export default function DashboardSettings() {
         </div>
       </section>
 
-      {/* Google Calendar (Phase 3) */}
+      {/* Google Calendar */}
       <section>
         <h2 className="text-xl font-bold mb-4">Google Calendar</h2>
         <div className="bg-white rounded-lg shadow-sm p-6">
-          <p className="text-gray-600">Google Calendar integration is coming in Phase 3.</p>
+          {/* Status message */}
+          {calendarStatus && (
+            <div className={`mb-4 p-3 rounded-lg ${
+              calendarStatus.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+            }`}>
+              {calendarStatus.message}
+            </div>
+          )}
+
+          {!practitioner?.google_calendar_connected ? (
+            <div className="text-center py-4">
+              <p className="text-gray-600 mb-4">
+                Automatically create calendar events for bookings and check for conflicts
+              </p>
+              <button
+                onClick={handleConnectGoogleCalendar}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                </svg>
+                Connect Google Calendar
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-green-600">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <span className="font-medium">Google Calendar connected</span>
+              </div>
+
+              {calendarLoading ? (
+                <p className="text-gray-500">Loading calendars...</p>
+              ) : calendars.length > 0 ? (
+                <div>
+                  <label className="block text-sm font-medium mb-1">Select calendar</label>
+                  <select
+                    value={selectedCalendarId}
+                    onChange={(e) => handleSelectCalendar(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  >
+                    {calendars.map((cal) => (
+                      <option key={cal.id} value={cal.id}>
+                        {cal.summary} {cal.primary ? '(primary)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
+
+              <button
+                onClick={handleDisconnectGoogleCalendar}
+                className="px-4 py-2 text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+              >
+                Disconnect
+              </button>
+            </div>
+          )}
         </div>
       </section>
     </div>

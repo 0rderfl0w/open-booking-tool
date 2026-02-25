@@ -4,6 +4,7 @@ import { cancelRequestSchema } from '../src/lib/validation';
 import { sanitizeText } from '../src/lib/sanitize';
 import { RATE_LIMITS } from '../src/lib/constants';
 import { sendCancellationEmail } from '../src/lib/email';
+import { deleteCalendarEvent } from '../src/lib/google-calendar';
 import type { Booking, SessionType, Practitioner } from '../src/types/database';
 
 // Rate limiter for cancel endpoint
@@ -63,6 +64,7 @@ export default async function handler(
       guest_name,
       guest_email,
       guest_timezone,
+      google_event_id,
       session_types!inner(
         id,
         name,
@@ -75,7 +77,8 @@ export default async function handler(
         username,
         display_name,
         email,
-        timezone
+        timezone,
+        google_calendar_connected
       )
     `)
     .eq('booking_token', booking_token)
@@ -164,6 +167,15 @@ export default async function handler(
     sendCancellationEmail(bookingForEmail.guest_email, { booking: bookingForEmail as unknown as Booking, sessionType: sessionTypeData as unknown as SessionType, practitioner: practitionerData as unknown as Practitioner }).catch((err) => {
       console.error('[Cancel] Failed to send cancellation email:', err);
     });
+
+    // Delete Google Calendar event (async - don't block response)
+    const practitionerId = practitionerData.id;
+    const googleEventId = (booking as unknown as { google_event_id: string | null }).google_event_id;
+    if (googleEventId) {
+      deleteCalendarEvent(practitionerId, googleEventId, supabase).catch((err) => {
+        console.error('[Google Calendar] Failed to delete event:', err);
+      });
+    }
   }
 
   return apiResponse(res, 200, {

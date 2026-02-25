@@ -34,9 +34,14 @@ export interface PublicPractitioner {
 export interface PractitionerCredentials {
   id: string;
   practitioner_id: string;
+  /** Vault UUID for the refresh token (production Supabase Vault approach). */
   google_refresh_token_vault_id: string | null;
+  /** Direct refresh token storage (simpler for self-hosted; see migration 003). */
+  google_refresh_token: string | null;
   google_token_expiry: string | null;
   google_calendar_id: string;
+  google_cb_failures: number;
+  google_cb_first_failure_at: string | null;
   created_at: string;
   updated_at: string;
 }
