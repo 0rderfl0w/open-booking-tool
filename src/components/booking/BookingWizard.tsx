@@ -40,6 +40,9 @@ interface WizardState {
   practitionerLoading: boolean;
   practitionerError: string | null;
   availableDays: Set<number>;
+  availableDates: Set<string>;
+  availableDatesLoading: boolean;
+  availableDatesMonth: string | null;
   sessionTypes: SessionType[];
   selectedSessionType: SessionType | null;
   selectedDate: Date | null;
@@ -71,6 +74,8 @@ type WizardAction =
   | { type: 'SUBMIT_ERROR'; message: string }
   | { type: 'SLOT_TAKEN' }
   | { type: 'SESSION_TYPE_NOT_FOUND'; message: string }
+  | { type: 'AVAILABLE_DATES_LOADING'; month: string }
+  | { type: 'AVAILABLE_DATES_LOADED'; dates: Set<string>; month: string }
   | { type: 'GO_BACK' }
   | { type: 'CLEAR_SUBMIT_ERROR' };
 
@@ -81,6 +86,9 @@ function makeInitialState(timezone: string): WizardState {
     practitionerLoading: true,
     practitionerError: null,
     availableDays: new Set<number>(),
+    availableDates: new Set<string>(),
+    availableDatesLoading: false,
+    availableDatesMonth: null,
     sessionTypes: [],
     selectedSessionType: null,
     selectedDate: null,
@@ -189,6 +197,14 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
         selectedSlot: null,
         message: action.message,
       };
+
+    case 'AVAILABLE_DATES_LOADING':
+      return { ...state, availableDatesLoading: true, availableDatesMonth: action.month };
+
+    case 'AVAILABLE_DATES_LOADED':
+      // Only apply if this response is for the month we're currently viewing
+      if (action.month !== state.availableDatesMonth) return state;
+      return { ...state, availableDatesLoading: false, availableDates: action.dates };
 
     case 'GO_BACK': {
       if (state.step === 'session-type') return state;
@@ -338,6 +354,46 @@ export default function BookingWizard({
     state.sessionTypes,
     preSelectedSessionTypeId,
   ]);
+
+  // ── Fetch available dates for the visible month ────────────────────────────
+  const fetchAvailableDates = useCallback((monthDate: Date) => {
+    if (!state.selectedSessionType || !username) return;
+    const y = monthDate.getFullYear();
+    const m = String(monthDate.getMonth() + 1).padStart(2, '0');
+    const month = `${y}-${m}`;
+
+    dispatch({ type: 'AVAILABLE_DATES_LOADING', month });
+
+    const params = new URLSearchParams({
+      username,
+      session_type_id: state.selectedSessionType.id,
+      month,
+    });
+
+    fetch(`/api/available-dates?${params.toString()}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.available_dates) {
+          dispatch({
+            type: 'AVAILABLE_DATES_LOADED',
+            dates: new Set(data.available_dates as string[]),
+            month,
+          });
+        }
+      })
+      .catch(() => {
+        // On failure, don't disable anything — let slots endpoint handle it
+        dispatch({ type: 'AVAILABLE_DATES_LOADED', dates: new Set<string>(), month });
+      });
+  }, [state.selectedSessionType, username]);
+
+  // Fetch available dates when entering the date step
+  useEffect(() => {
+    if (state.step !== 'date') return;
+    if (!state.selectedSessionType) return;
+    // Fetch for the current month
+    fetchAvailableDates(new Date());
+  }, [state.step, state.selectedSessionType, fetchAvailableDates]);
 
   // ── Fetch slots when step is time ─────────────────────────────────────────
   useEffect(() => {
@@ -568,8 +624,19 @@ export default function BookingWizard({
               disabled={[
                 { before: minDate },
                 { after: maxDate },
-                (date: Date) => !state.availableDays.has(date.getDay()),
+                (date: Date) => {
+                  // Day of week must have availability windows
+                  if (!state.availableDays.has(date.getDay())) return true;
+                  // If we have available dates data for this month, check it
+                  const dateStr = formatDateToISO(date);
+                  const dateMonth = dateStr.slice(0, 7); // YYYY-MM
+                  if (state.availableDatesMonth === dateMonth && !state.availableDatesLoading) {
+                    return !state.availableDates.has(dateStr);
+                  }
+                  return false; // Don't disable while loading or for unfetched months
+                },
               ]}
+              onMonthChange={(month) => fetchAvailableDates(month)}
               fromMonth={minDate}
               toMonth={maxDate}
               className="border border-gray-200 rounded-xl p-2"

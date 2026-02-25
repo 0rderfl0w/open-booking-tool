@@ -73,6 +73,7 @@ function readBody(req: IncomingMessage): Promise<string> {
 const routes: Array<{ pattern: RegExp; module: string; paramNames?: string[] }> = [
   { pattern: /^\/api\/health$/, module: './api/health.ts' },
   { pattern: /^\/api\/slots$/, module: './api/slots.ts' },
+  { pattern: /^\/api\/available-dates$/, module: './api/available-dates.ts' },
   { pattern: /^\/api\/book$/, module: './api/book.ts' },
   { pattern: /^\/api\/cancel$/, module: './api/cancel.ts' },
   { pattern: /^\/api\/booking\/([^/]+)\/details$/, module: './api/booking/[token]/details.ts', paramNames: ['token'] },
