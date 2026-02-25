@@ -4,7 +4,7 @@ import { createServiceClient, createRateLimiter, apiResponse, apiError, getClien
 import { slotsQuerySchema } from '../src/lib/validation';
 import { calculateSlots } from '../src/lib/slots';
 import { RATE_LIMITS } from '../src/lib/constants';
-import { fetchCalendarEvents, type GoogleCalendarEvent } from '../src/lib/google-calendar';
+import { fetchBusyPeriods } from '../src/lib/google-calendar';
 
 // Rate limiter for slots endpoint
 const slotsRateLimiter = createRateLimiter(
@@ -114,29 +114,27 @@ export default async function handler(
   const dateOverrides = (dateOverridesResult.data ?? []) as DateOverride[];
   const existingBookings = (bookingsResult.data ?? []) as { starts_at: string; ends_at: string; buffer_minutes: number }[];
 
-  // Step: Fetch Google Calendar events if connected (for conflict checking)
+  // Step: Fetch Google Calendar busy periods if connected (for conflict checking)
   if (isGoogleCalendarConnected) {
     const dateStart = `${date}T00:00:00Z`;
     const dateEnd = `${date}T23:59:59Z`;
 
-    const googleEvents = await fetchCalendarEvents(
+    const busyPeriods = await fetchBusyPeriods(
       (practitioner as { id: string }).id,
       dateStart,
       dateEnd,
       supabase,
     );
 
-    // Merge Google events into busy periods
-    if (googleEvents.length > 0) {
-      const googleBusyPeriods = googleEvents
-        .filter((e: GoogleCalendarEvent) => e.status !== 'cancelled' && e.start?.dateTime && e.end?.dateTime)
-        .map((e: GoogleCalendarEvent) => ({
-          starts_at: e.start!.dateTime!,
-          ends_at: e.end!.dateTime!,
-          buffer_minutes: 0,
-        }));
+    // Merge Google busy periods into existing bookings for conflict checking
+    if (busyPeriods.length > 0) {
+      const googleBusy = busyPeriods.map(p => ({
+        starts_at: p.start,
+        ends_at: p.end,
+        buffer_minutes: 0,
+      }));
 
-      existingBookings.push(...googleBusyPeriods);
+      existingBookings.push(...googleBusy);
     }
   }
 

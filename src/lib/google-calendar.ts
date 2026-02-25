@@ -193,6 +193,84 @@ export interface GoogleCalendarEvent {
  * Fetch Google Calendar events within a time range for conflict checking.
  * Returns an empty array on error (graceful degradation).
  */
+/**
+ * Fetch busy periods from Google Calendar using the FreeBusy API.
+ * This queries ALL calendars at once (primary + secondary + overlaid),
+ * returning aggregated busy time ranges. Much more reliable than
+ * querying a single calendar's events list.
+ */
+export async function fetchBusyPeriods(
+  practitionerId: string,
+  timeMin: string,
+  timeMax: string,
+  supabase: SupabaseClient,
+): Promise<Array<{ start: string; end: string }>> {
+  try {
+    const accessToken = await getAccessToken(practitionerId, supabase);
+
+    // List all visible calendars so we can check them all for conflicts
+    const listRes = await googleFetch(
+      accessToken,
+      'GET',
+      '/users/me/calendarList?minAccessRole=freeBusyReader',
+    );
+
+    let calendarIds = ['primary'];
+    if (listRes.ok) {
+      const listData = await listRes.json() as { items?: Array<{ id: string }> };
+      if (listData.items?.length) {
+        calendarIds = listData.items.map(c => c.id);
+      }
+    }
+
+    // Call FreeBusy API — aggregates busy times across all calendars
+    const response = await googleFetch(
+      accessToken,
+      'POST',
+      '/freeBusy',
+      {
+        timeMin,
+        timeMax,
+        items: calendarIds.map(id => ({ id })),
+      },
+    );
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`FreeBusy query failed (${response.status}): ${text}`);
+    }
+
+    const data = await response.json() as {
+      calendars?: Record<string, { busy?: Array<{ start: string; end: string }> }>;
+    };
+
+    // Merge busy periods from all calendars
+    const allBusy: Array<{ start: string; end: string }> = [];
+    if (data.calendars) {
+      for (const cal of Object.values(data.calendars)) {
+        if (cal.busy?.length) {
+          allBusy.push(...cal.busy);
+        }
+      }
+    }
+
+    // Reset circuit breaker on success
+    await supabase
+      .from('practitioner_credentials')
+      .update({ google_cb_failures: 0, google_cb_first_failure_at: null })
+      .eq('practitioner_id', practitionerId);
+
+    return allBusy;
+  } catch (err) {
+    console.warn('[GoogleCalendar] fetchBusyPeriods error — degrading gracefully:', err);
+    await handleGoogleError(err, practitionerId, supabase);
+    return [];
+  }
+}
+
+/**
+ * @deprecated Use fetchBusyPeriods instead. Kept for createCalendarEvent/deleteCalendarEvent.
+ */
 export async function fetchCalendarEvents(
   practitionerId: string,
   timeMin: string,
