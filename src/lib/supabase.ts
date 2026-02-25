@@ -40,6 +40,7 @@ export const supabase = createClient(
 /**
  * Lightweight anon client for public reads (username checks, public profiles).
  * No auth session — bypasses Navigator LockManager entirely.
+ * Uses a separate storageKey to avoid "Multiple GoTrueClient instances" warning.
  */
 export const supabasePublic = createClient(
   import.meta.env.VITE_SUPABASE_URL,
@@ -48,6 +49,7 @@ export const supabasePublic = createClient(
     auth: {
       persistSession: false,
       autoRefreshToken: false,
+      storageKey: 'sb-public-auth-token',
     },
   }
 );

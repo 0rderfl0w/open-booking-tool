@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, NavLink } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/lib/supabase';
 
 // ─── Nav items ─────────────────────────────────────────────────────────────────
 
@@ -114,13 +115,35 @@ export default function DashboardLayout() {
   const { practitioner, signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [hasSessionTypes, setHasSessionTypes] = useState(false);
+  const [hasAvailability, setHasAvailability] = useState(false);
 
-  // We track onboarding completion via presence of practitioner data
-  // For real-time session type / availability status, we rely on a context
-  // or child pages can pass this up. For now, we approximate based on practitioner.
-  // DashboardSessions/DashboardAvailability will update this via URL change.
-  const hasSessionTypes = false; // approximate — banner disappears on full setup in onboarding
-  const hasAvailability = false;
+  // Query real onboarding status from Supabase
+  useEffect(() => {
+    if (!practitioner?.id) return;
+
+    async function checkOnboardingStatus() {
+      // Check for at least one active session type
+      const { count: sessionCount } = await supabase
+        .from('session_types')
+        .select('id', { count: 'exact', head: true })
+        .eq('practitioner_id', practitioner!.id)
+        .eq('is_active', true);
+
+      setHasSessionTypes((sessionCount ?? 0) > 0);
+
+      // Check for at least one active availability window
+      const { count: availCount } = await supabase
+        .from('availability')
+        .select('id', { count: 'exact', head: true })
+        .eq('practitioner_id', practitioner!.id)
+        .eq('is_active', true);
+
+      setHasAvailability((availCount ?? 0) > 0);
+    }
+
+    checkOnboardingStatus();
+  }, [practitioner?.id]);
 
   async function handleSignOut() {
     setSigningOut(true);
