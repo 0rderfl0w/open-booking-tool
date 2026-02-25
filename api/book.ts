@@ -109,14 +109,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // 4. Calculate end time
+    // 4. Per-email rate limiting — max bookings per guest email per day
+    const { count: emailBookingCount, error: rateLimitError } = await supabase
+      .from('bookings')
+      .select('id', { count: 'exact', head: true })
+      .eq('guest_email', guest_email.trim().toLowerCase())
+      .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+      .neq('status', 'cancelled');
+
+    if (!rateLimitError && (emailBookingCount ?? 0) >= RATE_LIMITS.emailPerDay) {
+      return res.status(429).json({
+        error: { code: 'RATE_LIMITED', message: 'Too many bookings from this email address today' },
+      });
+    }
+
+    // 5. Calculate end time
     const startDate = new Date(starts_at);
     const endDate = new Date(startDate.getTime() + sessionType.duration_minutes * 60 * 1000);
 
-    // 5. Generate booking token
+    // 6. Generate booking token
     const bookingToken = nanoid(BOOKING_TOKEN_LENGTH);
 
-    // 6. Insert booking
+    // 7. Insert booking
     const { data: booking, error: insertError } = await supabase
       .from('bookings')
       .insert({
@@ -148,7 +162,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // 7. Send confirmation emails (async - don't wait)
+    // 8. Send confirmation emails (async - don't wait)
     const appUrl = process.env.APP_URL || '';
     
     // Send guest confirmation email
@@ -161,7 +175,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.error('Failed to send practitioner notification:', err);
     });
 
-    // 8. Return success
+    // 9. Return success
     return res.status(201).json({
       booking_token: booking.booking_token,
       booking_url: `${appUrl}/booking/${booking.booking_token}`,

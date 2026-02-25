@@ -15,6 +15,9 @@ export default function DashboardSettings() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   
+  const [emailRemindersEnabled, setEmailRemindersEnabled] = useState(false);
+  const [remindersSaving, setRemindersSaving] = useState(false);
+
   const [embedMode, setEmbedMode] = useState<'inline' | 'modal'>('inline');
   const [accentColor, setAccentColor] = useState(DEFAULT_ACCENT_COLOR);
   const [copyFeedback, setCopyFeedback] = useState(false);
@@ -26,6 +29,7 @@ export default function DashboardSettings() {
       setDisplayName(practitioner.display_name);
       setBio(practitioner.bio || '');
       setTimezone(practitioner.timezone);
+      setEmailRemindersEnabled(practitioner.email_reminders_enabled);
     }
   }, [practitioner]);
 
@@ -54,6 +58,21 @@ export default function DashboardSettings() {
       .update({ is_active: !practitioner.is_active })
       .eq('id', practitioner.id);
     await refreshPractitioner();
+  }
+
+  async function handleToggleReminders() {
+    if (!practitioner) return;
+    setRemindersSaving(true);
+    const newValue = !emailRemindersEnabled;
+    const { error } = await supabase
+      .from('practitioners')
+      .update({ email_reminders_enabled: newValue })
+      .eq('id', practitioner.id);
+    if (!error) {
+      setEmailRemindersEnabled(newValue);
+      await refreshPractitioner();
+    }
+    setRemindersSaving(false);
   }
 
   function getEmbedCode() {
@@ -221,6 +240,35 @@ export default function DashboardSettings() {
               className={`px-4 py-2 rounded-lg ${practitioner.is_active ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}
             >
               {practitioner.is_active ? 'Pause Bookings' : 'Resume Bookings'}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Email Reminders */}
+      <section>
+        <h2 className="text-xl font-bold mb-4">Email Reminders</h2>
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium">Send reminder emails 24 hours before each booking</p>
+              <p className="text-sm text-gray-600">
+                Guests receive a reminder. You receive a daily digest of tomorrow's bookings.
+              </p>
+            </div>
+            <button
+              onClick={handleToggleReminders}
+              disabled={remindersSaving}
+              aria-pressed={emailRemindersEnabled}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 ${
+                emailRemindersEnabled ? 'bg-blue-600' : 'bg-gray-200'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                  emailRemindersEnabled ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
             </button>
           </div>
         </div>

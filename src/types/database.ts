@@ -14,6 +14,7 @@ export interface Practitioner {
   timezone: string;
   is_active: boolean;
   google_calendar_connected: boolean;
+  email_reminders_enabled: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -94,6 +95,7 @@ export interface Booking {
   cancellation_reason: string | null;
   confirmation_email_sent_at: string | null;
   reminder_sent_at: string | null;
+  email_retry_count: number;
   created_at: string;
   updated_at: string;
 }
