@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-02-25
+
+### Bug Fixes (Razor & Blade)
+- Fix: `isBodyTooLarge()` in slots, cancel, and ICS endpoints passed full `req` object instead of `req.body` — caused `Converting circular structure to JSON` errors
+- Fix: `book.ts` used `req.socket.remoteAddress` without optional chaining — caused crash when socket undefined
+- Fix: Removed misleading "email would be sent" stub log in cancel.ts (emails were actually sending)
+- All prior session fixes committed: supabasePublic client, simpleLock mutex, booking-avatars bucket name, public_practitioners view for username check
+
+### Smoke Test — PASSED ✅ (Z manual testing)
+- Full booking flow: book appointment → confirmation page → emails sent ✅
+- Booking detail page: date/time/timezone/duration/notes/guest details render correctly ✅
+- Dashboard bookings: upcoming + past sections, cancel button working ✅
+- Practitioner-side cancellation: booking moves to "Past" as "Cancelled" ✅
+- Guest-side cancellation: public booking page shows "Cancelled" status ✅
+- Email notifications: booking confirmed, booking cancelled — all received ✅
+- Console: only expected warning (multiple GoTrueClient instances from dual client design)
+
 ## 2026-02-24
 
 ### Smoke Test Results (Razor & Blade)
