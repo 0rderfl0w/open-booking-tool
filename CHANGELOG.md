@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-02-25 (evening)
+
+### Email Reminders + Rate Limiting (Razor & Blade)
+- Added 24-hour reminder emails for guests (ReminderEmail.tsx)
+- Added daily digest emails for practitioners (DailyDigestEmail.tsx)
+- Added email retry system for failed confirmations (api/retry-emails.ts)
+- Added cron job for sending reminders hourly (api/send-reminders.ts)
+- Added per-email rate limiting in book.ts — max 3 bookings per email per day (Postgres-based)
+- Added Email Reminders toggle in DashboardSettings UI
+- Added CRON_SECRET auth for API endpoints
+- Added pg_cron setup instructions in migration SQL (run manually in Supabase dashboard)
+- Migration 002_email_reminders.sql: adds `email_reminders_enabled` to practitioners, `email_retry_count` to bookings
+- All passes `npx tsc --noEmit` with zero errors
+
 ## 2026-02-25 (late)
 
 ### Repo Setup (Razor & Blade)
