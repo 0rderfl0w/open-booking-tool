@@ -45,6 +45,13 @@ function shimResponse(res: ServerResponse) {
       res.setHeader(name, value);
       return resp;
     },
+    redirect(statusOrUrl: number | string, url?: string) {
+      const code = typeof statusOrUrl === 'number' ? statusOrUrl : 302;
+      const location = typeof statusOrUrl === 'string' ? statusOrUrl : url!;
+      res.writeHead(code, { Location: location });
+      res.end();
+      return resp;
+    },
     end(body?: string) {
       res.writeHead(_status);
       res.end(body);
@@ -70,6 +77,14 @@ const routes: Array<{ pattern: RegExp; module: string; paramNames?: string[] }> 
   { pattern: /^\/api\/cancel$/, module: './api/cancel.ts' },
   { pattern: /^\/api\/booking\/([^/]+)\/details$/, module: './api/booking/[token]/details.ts', paramNames: ['token'] },
   { pattern: /^\/api\/booking\/([^/]+)\/ics$/, module: './api/booking/[token]/ics.ts', paramNames: ['token'] },
+  // Email reminders
+  { pattern: /^\/api\/send-reminders$/, module: './api/send-reminders.ts' },
+  { pattern: /^\/api\/retry-emails$/, module: './api/retry-emails.ts' },
+  // Google Calendar OAuth
+  { pattern: /^\/api\/google\/connect$/, module: './api/google/connect.ts' },
+  { pattern: /^\/api\/google\/callback$/, module: './api/google/callback.ts' },
+  { pattern: /^\/api\/google\/disconnect$/, module: './api/google/disconnect.ts' },
+  { pattern: /^\/api\/google\/calendars$/, module: './api/google/calendars.ts' },
 ];
 
 export default function devApiProxy(): Plugin {
