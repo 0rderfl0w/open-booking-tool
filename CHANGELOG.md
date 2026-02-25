@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-02-25 (night)
+
+### Google Calendar Integration (Razor & Blade)
+- Added OAuth connect/disconnect flow via `/api/google/connect`, `/api/google/callback`, `/api/google/disconnect`
+- Added calendar list fetch via `/api/google/calendars` for calendar selector
+- Added auto-event creation on booking via `src/lib/google-calendar.ts`
+- Added auto-event deletion on cancellation
+- Added conflict checking in slot engine (filters out Google Calendar events as busy periods)
+- Added circuit breaker: disables integration after 5 failures in 15 minutes
+- Added migration 003: adds `google_refresh_token` column to `practitioner_credentials`
+- Updated DashboardSettings with full Google Calendar UI (connect/disconnect/select calendar)
+- All passes `npx tsc --noEmit` with zero errors
+
 ## 2026-02-25 (evening)
 
 ### Email Reminders + Rate Limiting (Razor & Blade)
