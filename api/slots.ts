@@ -5,6 +5,7 @@ import { slotsQuerySchema } from '../src/lib/validation';
 import { calculateSlots } from '../src/lib/slots';
 import { RATE_LIMITS } from '../src/lib/constants';
 import { fetchBusyPeriods } from '../src/lib/google-calendar';
+import { fetchAppleBusyPeriods } from '../src/lib/apple-calendar';
 
 // Rate limiter for slots endpoint
 const slotsRateLimiter = createRateLimiter(
@@ -61,7 +62,7 @@ export default async function handler(
   // Step 1: Look up practitioner by username
   const { data: practitioner, error: practitionerError } = await supabase
     .from('public_practitioners')
-    .select('id, username, timezone, is_active, google_calendar_connected')
+    .select('id, username, timezone, is_active, google_calendar_connected, apple_calendar_connected')
     .eq('username', username)
     .single();
 
@@ -70,6 +71,7 @@ export default async function handler(
   }
 
   const isGoogleCalendarConnected = (practitioner as { google_calendar_connected?: boolean }).google_calendar_connected ?? false;
+  const isAppleCalendarConnected = (practitioner as { apple_calendar_connected?: boolean }).apple_calendar_connected ?? false;
 
   // Step 2: Look up session type
   const { data: sessionType, error: sessionTypeError } = await supabase
@@ -114,27 +116,31 @@ export default async function handler(
   const dateOverrides = (dateOverridesResult.data ?? []) as DateOverride[];
   const existingBookings = (bookingsResult.data ?? []) as { starts_at: string; ends_at: string; buffer_minutes: number }[];
 
-  // Step: Fetch Google Calendar busy periods if connected (for conflict checking)
+  // Fetch calendar busy periods in parallel (Google + Apple)
+  const calendarPromises: Promise<Array<{ start: string; end: string }>>[] = [];
+
   if (isGoogleCalendarConnected) {
     const dateStart = `${date}T00:00:00Z`;
     const dateEnd = `${date}T23:59:59Z`;
+    calendarPromises.push(fetchBusyPeriods(practitioner.id, dateStart, dateEnd, supabase));
+  }
 
-    const busyPeriods = await fetchBusyPeriods(
-      (practitioner as { id: string }).id,
-      dateStart,
-      dateEnd,
-      supabase,
-    );
+  if (isAppleCalendarConnected) {
+    const dateStart = `${date}T00:00:00Z`;
+    const dateEnd = `${date}T23:59:59Z`;
+    calendarPromises.push(fetchAppleBusyPeriods(practitioner.id, dateStart, dateEnd, supabase));
+  }
 
-    // Merge Google busy periods into existing bookings for conflict checking
-    if (busyPeriods.length > 0) {
-      const googleBusy = busyPeriods.map(p => ({
-        starts_at: p.start,
-        ends_at: p.end,
-        buffer_minutes: 0,
-      }));
-
-      existingBookings.push(...googleBusy);
+  if (calendarPromises.length > 0) {
+    const calendarResults = await Promise.all(calendarPromises);
+    for (const busyPeriods of calendarResults) {
+      if (busyPeriods.length > 0) {
+        existingBookings.push(...busyPeriods.map(p => ({
+          starts_at: p.start,
+          ends_at: p.end,
+          buffer_minutes: 0,
+        })));
+      }
     }
   }
 

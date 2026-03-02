@@ -4,6 +4,7 @@ import { nanoid } from 'nanoid';
 import { sendConfirmationEmail, sendPractitionerNotificationEmail } from '../src/lib/email';
 import { RATE_LIMITS, BOOKING_TOKEN_LENGTH } from '../src/lib/constants';
 import { createCalendarEvent } from '../src/lib/google-calendar';
+import { createAppleCalendarEvent } from '../src/lib/apple-calendar';
 import type { Booking, SessionType, Practitioner } from '../src/types/database';
 
 // Initialize Supabase client
@@ -190,7 +191,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // 10. Return success
+    // 10. Create Apple Calendar event (async - don't block response)
+    if (practitioner.apple_calendar_connected) {
+      createAppleCalendarEvent(
+        practitioner.id,
+        booking as Booking,
+        sessionType as SessionType,
+        practitioner as Practitioner,
+        supabase,
+      ).catch((err) => {
+        console.error('[Apple Calendar] Failed to create event:', err);
+      });
+    }
+
+    // 11. Return success
     return res.status(201).json({
       booking_token: booking.booking_token,
       booking_url: `${appUrl}/booking/${booking.booking_token}`,

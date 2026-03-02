@@ -13,6 +13,11 @@ interface CalendarOption {
   primary: boolean;
 }
 
+interface AppleCalendarOption {
+  url: string;
+  displayName: string;
+}
+
 export default function DashboardSettings() {
   const { practitioner, refreshPractitioner } = useAuth();
   const [displayName, setDisplayName] = useState('');
@@ -33,6 +38,15 @@ export default function DashboardSettings() {
   const [selectedCalendarId, setSelectedCalendarId] = useState<string>('');
   const [calendarLoading, setCalendarLoading] = useState(false);
   const [calendarStatus, setCalendarStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Apple Calendar state
+  const [appleUsername, setAppleUsername] = useState('');
+  const [applePassword, setApplePassword] = useState('');
+  const [appleCalendars, setAppleCalendars] = useState<AppleCalendarOption[]>([]);
+  const [selectedAppleCalendarUrl, setSelectedAppleCalendarUrl] = useState<string>('');
+  const [appleConnecting, setAppleConnecting] = useState(false);
+  const [appleStatus, setAppleStatus] = useState<{ type: 'success' | 'error' | 'warning'; message: string } | null>(null);
+  const [appleAuthError, setAppleAuthError] = useState(false);
 
   const copyRef = useRef<HTMLTextAreaElement>(null);
 
@@ -61,6 +75,39 @@ export default function DashboardSettings() {
       fetchCalendars();
     }
   }, [practitioner?.google_calendar_connected]);
+
+  // Check for Apple auth error on load
+  useEffect(() => {
+    if (!practitioner) return;
+    if (practitioner.apple_calendar_connected) return;
+
+    async function checkAppleAuthError() {
+      if (!practitioner) return;
+      const { data: creds } = await supabase
+        .from('practitioner_credentials')
+        .select('apple_last_auth_error_at, apple_calendars_json')
+        .eq('practitioner_id', practitioner.id)
+        .single();
+
+      if (creds?.apple_last_auth_error_at) {
+        setAppleAuthError(true);
+      }
+
+      // Restore calendar list if credentials exist but calendar not yet selected
+      if (creds?.apple_calendars_json) {
+        try {
+          const parsed = JSON.parse(creds.apple_calendars_json) as AppleCalendarOption[];
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setAppleCalendars(parsed);
+          }
+        } catch {
+          // ignore parse errors
+        }
+      }
+    }
+
+    void checkAppleAuthError();
+  }, [practitioner]);
 
   async function fetchCalendars() {
     setCalendarLoading(true);
@@ -148,6 +195,104 @@ export default function DashboardSettings() {
     }
   }
 
+  async function handleConnectAppleCalendar(e: React.FormEvent) {
+    e.preventDefault();
+    if (!appleUsername || !applePassword) return;
+
+    setAppleConnecting(true);
+    setAppleStatus(null);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setAppleStatus({ type: 'error', message: 'Not authenticated' });
+        setAppleConnecting(false);
+        return;
+      }
+
+      const res = await fetch('/api/apple/connect', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username: appleUsername, password: applePassword }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setAppleStatus({ type: 'error', message: data.error?.message || 'Failed to connect' });
+        setAppleConnecting(false);
+        return;
+      }
+
+      const calendarsData = data.calendars as AppleCalendarOption[];
+      setAppleCalendars(calendarsData);
+      setAppleAuthError(false);
+      setApplePassword('');
+      setAppleStatus({ type: 'success', message: 'Connected! Select a calendar below.' });
+    } catch {
+      setAppleStatus({ type: 'error', message: 'Failed to connect to Apple Calendar' });
+    }
+
+    setAppleConnecting(false);
+  }
+
+  async function handleSelectAppleCalendar(calendarUrl: string) {
+    setSelectedAppleCalendarUrl(calendarUrl);
+    if (!practitioner) return;
+
+    const { error: credError } = await supabase
+      .from('practitioner_credentials')
+      .update({ apple_calendar_id: calendarUrl })
+      .eq('practitioner_id', practitioner.id);
+
+    if (credError) {
+      setAppleStatus({ type: 'error', message: 'Failed to save calendar selection' });
+      return;
+    }
+
+    const { error: practError } = await supabase
+      .from('practitioners')
+      .update({ apple_calendar_connected: true })
+      .eq('id', practitioner.id);
+
+    if (practError) {
+      setAppleStatus({ type: 'error', message: 'Failed to update connection status' });
+      return;
+    }
+
+    await refreshPractitioner();
+    setAppleStatus({ type: 'success', message: 'Apple Calendar connected!' });
+  }
+
+  async function handleDisconnectAppleCalendar() {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+
+      const res = await fetch('/api/apple/disconnect', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+
+      if (res.ok) {
+        setAppleCalendars([]);
+        setSelectedAppleCalendarUrl('');
+        setAppleUsername('');
+        setApplePassword('');
+        setAppleAuthError(false);
+        await refreshPractitioner();
+        setAppleStatus({ type: 'success', message: 'Apple Calendar disconnected' });
+      } else {
+        setAppleStatus({ type: 'error', message: 'Failed to disconnect' });
+      }
+    } catch {
+      setAppleStatus({ type: 'error', message: 'Failed to disconnect' });
+    }
+  }
+
   useEffect(() => {
     if (practitioner) {
       setDisplayName(practitioner.display_name);
@@ -220,6 +365,8 @@ export default function DashboardSettings() {
   const bookingPageUrl = practitioner ? `${getAppUrl()}/book/${practitioner.username}` : '';
 
   if (!practitioner) return <div>Loading...</div>;
+
+  const bothConnected = practitioner.google_calendar_connected && practitioner.apple_calendar_connected;
 
   return (
     <div className="space-y-8">
@@ -467,6 +614,167 @@ export default function DashboardSettings() {
           )}
         </div>
       </section>
+
+      {/* Apple Calendar */}
+      <section>
+        <h2 className="text-xl font-bold mb-4">Apple Calendar</h2>
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          {/* Status message */}
+          {appleStatus && (
+            <div className={`mb-4 p-3 rounded-lg ${
+              appleStatus.type === 'success'
+                ? 'bg-green-50 text-green-700'
+                : appleStatus.type === 'warning'
+                ? 'bg-amber-50 text-amber-700'
+                : 'bg-red-50 text-red-700'
+            }`}>
+              {appleStatus.message}
+            </div>
+          )}
+
+          {/* Auth error warning banner */}
+          {appleAuthError && !practitioner.apple_calendar_connected && (
+            <div className="mb-4 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-700">
+              <p className="font-medium">Apple Calendar connection was disconnected.</p>
+              <p className="text-sm mt-1">Your Apple ID password may have changed. Reconnect with a new app-specific password.</p>
+            </div>
+          )}
+
+          {practitioner.apple_calendar_connected ? (
+            /* State 2: Connected */
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-green-600">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <span className="font-medium">Apple Calendar connected</span>
+              </div>
+
+              {appleCalendars.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium mb-1">Select calendar</label>
+                  <select
+                    value={selectedAppleCalendarUrl}
+                    onChange={(e) => void handleSelectAppleCalendar(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  >
+                    {appleCalendars.map((cal) => (
+                      <option key={cal.url} value={cal.url}>
+                        {cal.displayName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <button
+                onClick={() => void handleDisconnectAppleCalendar()}
+                className="px-4 py-2 text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+              >
+                Disconnect
+              </button>
+            </div>
+          ) : appleCalendars.length > 0 ? (
+            /* Calendars loaded, waiting for selection */
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600">Select a calendar to complete setup:</p>
+              <div>
+                <label className="block text-sm font-medium mb-1">Calendar</label>
+                <select
+                  value={selectedAppleCalendarUrl}
+                  onChange={(e) => void handleSelectAppleCalendar(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg"
+                >
+                  <option value="">— choose a calendar —</option>
+                  {appleCalendars.map((cal) => (
+                    <option key={cal.url} value={cal.url}>
+                      {cal.displayName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                onClick={() => { setAppleCalendars([]); setAppleStatus(null); }}
+                className="px-4 py-2 text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            /* State 1: Disconnected — show connect form */
+            <form onSubmit={(e) => void handleConnectAppleCalendar(e)} className="space-y-4">
+              <p className="text-sm text-gray-600">
+                Connect your iCloud calendar to automatically create events for bookings and check for conflicts.
+                You'll need to create an{' '}
+                <a
+                  href="https://support.apple.com/en-us/102654"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline text-blue-600 hover:text-blue-700"
+                >
+                  app-specific password
+                </a>{' '}
+                at appleid.apple.com.
+              </p>
+
+              {/* Risk disclosure */}
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                <strong>Security note:</strong> Apple does not support calendar-only passwords. This password grants access to your full iCloud account (mail, contacts, calendar). Revoke it at{' '}
+                <a
+                  href="https://appleid.apple.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline"
+                >
+                  appleid.apple.com
+                </a>{' '}
+                if you suspect compromise.
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Apple ID (email)</label>
+                <input
+                  type="email"
+                  value={appleUsername}
+                  onChange={(e) => setAppleUsername(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  placeholder="you@icloud.com"
+                  required
+                  autoComplete="username"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">App-specific password</label>
+                <input
+                  type="password"
+                  value={applePassword}
+                  onChange={(e) => setApplePassword(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  placeholder="xxxx-xxxx-xxxx-xxxx"
+                  required
+                  autoComplete="current-password"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={appleConnecting || !appleUsername || !applePassword}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                {appleConnecting ? 'Connecting…' : 'Connect Apple Calendar'}
+              </button>
+            </form>
+          )}
+        </div>
+      </section>
+
+      {/* Bidirectional sync warning */}
+      {bothConnected && (
+        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
+          <strong>Note:</strong> Both Google and Apple calendars are connected. If they sync with each other, you may see duplicate booking events.
+        </div>
+      )}
     </div>
   );
 }

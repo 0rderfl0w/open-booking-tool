@@ -20,11 +20,13 @@
     "ical-generator": "^8.0.0",
     "isomorphic-dompurify": "^2.20.0",
     "nanoid": "^5.1.2",
+    "node-ical": "^0.25.4",
     "react": "^19.0.0",
     "react-day-picker": "^9.6.4",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.1.5",
     "resend": "^6.9.2",
+    "tsdav": "^2.1.8",
     "zod": "^3.24.2"
   },
   "devDependencies": {

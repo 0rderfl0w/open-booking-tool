@@ -1,4 +1,13 @@
+## 2026-02-28
+- Phase 3: Added Apple Calendar settings UI to DashboardSettings.tsx — 3-state UI (disconnected/calendar-picker/connected), auth error banner, risk disclosure, bidirectional sync warning. Created api/apple/connect.ts and api/apple/disconnect.ts (Alex)
+
+## 2026-02-28
+- Phase 2: Wired Apple Calendar into api/slots.ts (parallel fetch), api/book.ts (event creation), api/cancel.ts (event deletion) (Alex)
+
 # Changelog
+
+## 2026-02-28
+- Phase 1: iCloud CalDAV foundation — installed tsdav + node-ical, added supabase/migrations/004_apple_calendar.sql, updated src/types/database.ts with Apple fields (4 interfaces), created src/lib/apple-calendar.ts with full circuit breaker (Alex)
 
 ## 2026-02-25 (night)
 

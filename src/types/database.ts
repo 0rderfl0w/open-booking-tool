@@ -14,6 +14,7 @@ export interface Practitioner {
   timezone: string;
   is_active: boolean;
   google_calendar_connected: boolean;
+  apple_calendar_connected: boolean;
   email_reminders_enabled: boolean;
   created_at: string;
   updated_at: string;
@@ -29,6 +30,7 @@ export interface PublicPractitioner {
   timezone: string;
   is_active: boolean;
   google_calendar_connected: boolean;
+  apple_calendar_connected: boolean;
 }
 
 export interface PractitionerCredentials {
@@ -42,6 +44,14 @@ export interface PractitionerCredentials {
   google_calendar_id: string;
   google_cb_failures: number;
   google_cb_first_failure_at: string | null;
+  apple_caldav_username: string | null;
+  apple_caldav_password: string | null;
+  apple_calendar_id: string | null;
+  apple_caldav_server_url: string | null;
+  apple_calendars_json: string | null;
+  apple_cb_failures: number;
+  apple_cb_first_failure_at: string | null;
+  apple_last_auth_error_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -96,6 +106,7 @@ export interface Booking {
   status: BookingStatus;
   notes: string | null;
   google_event_id: string | null;
+  apple_event_id?: string | null;
   cancelled_at: string | null;
   cancellation_reason: string | null;
   confirmation_email_sent_at: string | null;

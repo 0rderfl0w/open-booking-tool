@@ -5,6 +5,7 @@ import { sanitizeText } from '../src/lib/sanitize';
 import { RATE_LIMITS } from '../src/lib/constants';
 import { sendCancellationEmail } from '../src/lib/email';
 import { deleteCalendarEvent } from '../src/lib/google-calendar';
+import { deleteAppleCalendarEvent } from '../src/lib/apple-calendar';
 import type { Booking, SessionType, Practitioner } from '../src/types/database';
 
 // Rate limiter for cancel endpoint
@@ -65,6 +66,7 @@ export default async function handler(
       guest_email,
       guest_timezone,
       google_event_id,
+      apple_event_id,
       session_types!inner(
         id,
         name,
@@ -78,7 +80,8 @@ export default async function handler(
         display_name,
         email,
         timezone,
-        google_calendar_connected
+        google_calendar_connected,
+        apple_calendar_connected
       )
     `)
     .eq('booking_token', booking_token)
@@ -174,6 +177,14 @@ export default async function handler(
     if (googleEventId) {
       deleteCalendarEvent(practitionerId, googleEventId, supabase).catch((err) => {
         console.error('[Google Calendar] Failed to delete event:', err);
+      });
+    }
+
+    // Delete Apple Calendar event (async - don't block response)
+    const appleEventId = (booking as unknown as { apple_event_id: string | null }).apple_event_id;
+    if (appleEventId) {
+      deleteAppleCalendarEvent(practitionerId, appleEventId, supabase).catch((err) => {
+        console.error('[Apple Calendar] Failed to delete event:', err);
       });
     }
   }
