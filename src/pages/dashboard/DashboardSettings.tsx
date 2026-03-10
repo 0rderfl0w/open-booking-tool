@@ -23,6 +23,9 @@ export default function DashboardSettings() {
   const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
   const [timezone, setTimezone] = useState('America/New_York');
+  const [website, setWebsite] = useState('');
+  const [linkedinUrl, setLinkedinUrl] = useState('');
+  const [twitterUrl, setTwitterUrl] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   
@@ -299,6 +302,9 @@ export default function DashboardSettings() {
       setBio(practitioner.bio || '');
       setTimezone(practitioner.timezone);
       setEmailRemindersEnabled(practitioner.email_reminders_enabled);
+      setWebsite(practitioner.website || '');
+      setLinkedinUrl(practitioner.linkedin_url || '');
+      setTwitterUrl(practitioner.twitter_url || '');
     }
   }, [practitioner]);
 
@@ -309,7 +315,7 @@ export default function DashboardSettings() {
     setSaving(true);
     const { error } = await supabase
       .from('practitioners')
-      .update({ display_name: displayName, bio, timezone })
+      .update({ display_name: displayName, bio, timezone, website, linkedin_url: linkedinUrl, twitter_url: twitterUrl })
       .eq('id', practitioner.id);
     
     setSaving(false);
@@ -410,8 +416,37 @@ export default function DashboardSettings() {
               <option value="Europe/Paris">Paris</option>
               <option value="Europe/Berlin">Berlin</option>
             </select>
+          </div>          <div>
+            <label className="block text-sm font-medium mb-1">Website</label>
+            <input
+              type="url"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg"
+              placeholder="https://yoursite.com"
+            />
           </div>
-          <button
+          <div>
+            <label className="block text-sm font-medium mb-1">LinkedIn URL</label>
+            <input
+              type="url"
+              value={linkedinUrl}
+              onChange={(e) => setLinkedinUrl(e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg"
+              placeholder="https://linkedin.com/in/yourprofile"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Twitter/X URL</label>
+            <input
+              type="url"
+              value={twitterUrl}
+              onChange={(e) => setTwitterUrl(e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg"
+              placeholder="https://twitter.com/yourhandle"
+            />
+          </div>
+<button
             type="submit"
             disabled={saving}
             className="px-4 py-2 bg-accent text-white rounded-lg hover:opacity-90 disabled:opacity-50"

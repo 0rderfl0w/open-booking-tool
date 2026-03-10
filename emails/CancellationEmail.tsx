@@ -1,3 +1,4 @@
+import { EmailSignature } from './components/EmailSignature';
 import {
   Html,
   Head,
@@ -90,6 +91,8 @@ export function CancellationEmail({
             <Text style={{ margin: '0', fontSize: '12px', color: '#94a3b8', textAlign: 'center' }}>
               Original Booking Reference: {booking.booking_token}
             </Text>
+
+            <EmailSignature practitioner={practitioner} />
           </Section>
         </Container>
       </Body>
@@ -114,5 +117,10 @@ ${booking.cancellation_reason ? `Cancellation reason: ${booking.cancellation_rea
 Book another session: ${getAppUrl()}/book/${practitioner.username}
 
 Original Booking Reference: ${booking.booking_token}
+  
+
+---
+${practitioner.display_name}
+${practitioner.email}
   `.trim();
 };

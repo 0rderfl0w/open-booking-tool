@@ -1,3 +1,4 @@
+import { EmailSignature } from './components/EmailSignature';
 import {
   Html,
   Head,
@@ -137,6 +138,8 @@ export function ReminderEmail({
             <Text style={{ margin: '0', fontSize: '12px', color: '#94a3b8', textAlign: 'center' }}>
               Booking Reference: {booking.booking_token}
             </Text>
+
+            <EmailSignature practitioner={practitioner} />
           </Section>
         </Container>
       </Body>
@@ -167,5 +170,10 @@ View details: ${appUrl}/booking/${booking.booking_token}
 Cancel booking: ${appUrl}/booking/${booking.booking_token}/cancel
 
 Booking Reference: ${booking.booking_token}
+  
+
+---
+${practitioner.display_name}
+${practitioner.email}
   `.trim();
 };

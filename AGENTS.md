@@ -2,7 +2,7 @@
 
 > Self-hosted booking page — own your schedule, ditch the SaaS. Open-source Calendly alternative.
 
-**Live:** Deployed on richkapp.com booking page
+**Live:** Deploy on Vercel
 **Repo:** `0rderfl0w/open-booking-tool` (GitHub, public)
 
 ## Tech Stack
@@ -34,7 +34,7 @@ bun run dev                   # localhost:5173
 │   └── types/           # TypeScript types
 ├── api/                 # Vercel serverless functions (book, cancel, slots, apple/)
 ├── supabase/
-│   └── migrations/      # DB migrations (001-004)
+│   └── migrations/      # DB migrations (001-005)
 ├── emails/              # React Email templates
 └── public/
 ```
@@ -65,3 +65,4 @@ Vercel auto-deploys from `main` branch. Supabase migrations run manually via CLI
 - Supabase free tier can 504 if project is idle — retry after 30s
 - RLS must have policies or queries return empty
 - Apple Calendar integration is WIP (migration 004 not yet applied in prod)
+- Vercel Hobby has 10s timeout. Awaiting email side effects can get tight — Vercel Pro (60s) recommended for production
