@@ -2,7 +2,7 @@
  * Booking confirmation/status/cancel page: /booking/:token
  */
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useSearchParams, Link } from 'react-router-dom';
 import type { BookingDetails } from '@/types/api';
 import { EmptyState } from '@/components/shared/EmptyState';
 
@@ -24,6 +24,7 @@ async function cancelBooking(token: string, reason?: string): Promise<boolean> {
 
 export default function BookingConfirmationPage() {
   const { token } = useParams<{ token: string }>();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState<BookingDetails | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -31,6 +32,12 @@ export default function BookingConfirmationPage() {
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
+
+  useEffect(() => {
+    if (searchParams.get('cancel') === 'true') {
+      setShowCancelConfirm(true);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!token) return;

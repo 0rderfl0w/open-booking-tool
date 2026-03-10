@@ -31,6 +31,7 @@ export function ConfirmationEmail({
   const appUrl = getAppUrl();
   const bookingUrl = `${appUrl}/booking/${booking.booking_token}`;
   const icsUrl = `${appUrl}/api/booking/${booking.booking_token}/ics`;
+  const cancelUrl = `${getAppUrl()}/cancel/${booking.booking_token}`;
 
   // Format the booking time in the guest's timezone
   const guestTimezone = booking.guest_timezone || 'UTC';
@@ -129,6 +130,23 @@ export function ConfirmationEmail({
               >
                 Add to Calendar
               </Button>
+              <br />
+              <Button
+                href={cancelUrl}
+                style={{
+                  display: 'inline-block',
+                  backgroundColor: '#ffffff',
+                  color: '#ef4444',
+                  padding: '12px 24px',
+                  borderRadius: '6px',
+                  textDecoration: 'none',
+                  fontWeight: '500',
+                  border: '1px solid #ef4444',
+                  marginTop: '8px',
+                }}
+              >
+                Cancel Booking
+              </Button>
             </Section>
 
             <Hr style={{ margin: '24px 0', border: 'none', borderTop: '1px solid #e2e8f0' }} />
@@ -166,6 +184,7 @@ ${sessionType.description || ''}
 
 View details: ${getAppUrl()}/booking/${booking.booking_token}
 Add to Calendar: ${getAppUrl()}/api/booking/${booking.booking_token}/ics
+Cancel booking: ${getAppUrl()}/cancel/${booking.booking_token}
 
 Booking Reference: ${booking.booking_token}
   

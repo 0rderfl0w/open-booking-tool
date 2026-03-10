@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { AuthProvider } from '@/hooks/useAuth';
 import BookingPage from '@/pages/BookingPage';
 import BookingConfirmationPage from '@/pages/BookingConfirmationPage';
@@ -12,12 +12,18 @@ import DashboardSettings from '@/pages/dashboard/DashboardSettings';
 import SignupPage from '@/pages/SignupPage';
 import OnboardingPage from '@/pages/OnboardingPage';
 
+function CancelRedirect() {
+  const { token } = useParams<{ token: string }>();
+  return <Navigate to={`/booking/${token}?cancel=true`} replace />;
+}
+
 export default function App() {
   return (
     <AuthProvider>
       <Routes>
         {/* Public routes */}
         <Route path="/book/:username" element={<BookingPage />} />
+        <Route path="/cancel/:token" element={<CancelRedirect />} />
         <Route path="/booking/:token" element={<BookingConfirmationPage />} />
         <Route path="/embed/:username" element={<EmbedPage />} />
         <Route path="/login" element={<LoginPage />} />

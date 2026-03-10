@@ -30,7 +30,7 @@ export function ReminderEmail({
 }: ReminderEmailProps) {
   const appUrl = getAppUrl();
   const bookingUrl = `${appUrl}/booking/${booking.booking_token}`;
-  const cancelUrl = `${appUrl}/booking/${booking.booking_token}/cancel`;
+  const cancelUrl = `${appUrl}/cancel/${booking.booking_token}`;
 
   // Format the booking time in the guest's timezone
   const guestTimezone = booking.guest_timezone || 'UTC';
@@ -167,7 +167,7 @@ Time: ${format(zonedStart, 'h:mm a')} - ${format(zonedEnd, 'h:mm a')} (${guestTi
 ${sessionType.description || ''}
 
 View details: ${appUrl}/booking/${booking.booking_token}
-Cancel booking: ${appUrl}/booking/${booking.booking_token}/cancel
+Cancel booking: ${appUrl}/cancel/${booking.booking_token}
 
 Booking Reference: ${booking.booking_token}
   
