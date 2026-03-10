@@ -1,4 +1,13 @@
 ## 2026-03-10
+- Backport production fixes: sanitize without DOM, await side effects, Apple Calendar upsert, lazy Resend init, origin validation, configurable FROM_EMAIL, PUBLIC_ env prefix support (Alex)
+- Feature: short booking links with database-driven resolution and multi-practitioner disambiguation (Alex)
+- Feature: cancel route with redirect to existing cancel flow (Alex)
+- Feature: email signature component with practitioner social links (Alex)
+- Feature: dashboard settings for social link management (Alex)
+- Migration: 005_practitioner_social adds website, linkedin_url, twitter_url columns (Alex)
+- Fix: AGENTS.md branding cleanup (Alex)
+
+## 2026-03-10
 - Phase 7 Feature 1: Short booking links — added /book/:sessionSlug and /book/:username/:sessionSlug routes. nameToSlug utility, BookingPage rewrite with async resolution (username-first, then slug, disambiguation for conflicts), README short-link docs (Alex)
 
 ## 2026-02-28

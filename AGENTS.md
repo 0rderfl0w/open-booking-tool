@@ -66,3 +66,11 @@ Vercel auto-deploys from `main` branch. Supabase migrations run manually via CLI
 - RLS must have policies or queries return empty
 - Apple Calendar integration is WIP (migration 004 not yet applied in prod)
 - Vercel Hobby has 10s timeout. Awaiting email side effects can get tight — Vercel Pro (60s) recommended for production
+
+## Vercel Deployment Gotchas
+
+- **Serverless async:** Await side effects (email, calendar) before returning response. Increases latency — Vercel Pro (60s timeout) recommended for production.
+- **DOM deps:** `isomorphic-dompurify` crashes on serverless (no jsdom available). Use regex sanitization instead.
+- **Lazy init:** Module-level `new Resend(undefined)` crashes on cold start. Use a `getResend()` factory pattern.
+- **Apple Calendar:** `tsdav` has an ESM/CJS compatibility issue on Vercel. Apple Calendar integration is non-functional on serverless.
+- **Rate limiting:** `api/book.ts` uses an in-memory rate limiter (resets on cold start). `api/cancel.ts` uses Upstash Redis when `UPSTASH_REDIS_REST_URL` is configured.
