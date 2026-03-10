@@ -10,7 +10,7 @@ import type { ErrorCode } from '../types/api';
  * This bypasses RLS and is used for API operations that need full DB access.
  */
 export function createServiceClient() {
-  const url = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
+  const url = process.env.SUPABASE_URL ?? process.env.PUBLIC_SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!url || !key) {
@@ -74,7 +74,7 @@ export function createRateLimiter(prefix: string, limit: number, window: Duratio
   const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
   const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
 
-  if (!redisUrl || !redisToken) {
+  if (!redisUrl || !redisToken || !redisUrl.startsWith('https://')) {
     // Return a dummy rate limiter for development
     console.warn(`[RateLimit] Redis not configured, skipping rate limiting for ${prefix}`);
     return {

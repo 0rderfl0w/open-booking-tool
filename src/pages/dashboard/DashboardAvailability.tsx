@@ -71,6 +71,7 @@ export default function DashboardAvailability() {
 
     async function fetchData() {
       setLoading(true);
+      try {
 
       // Fetch weekly availability
       const { data: availData } = await supabase
@@ -120,7 +121,12 @@ export default function DashboardAvailability() {
 
       setWeekData(week);
       setOverrides(overrideData ?? []);
-      setLoading(false);
+      } catch (err) {
+        console.error('Failed to load availability:', err);
+        setError('Failed to load availability data');
+      } finally {
+        setLoading(false);
+      }
     }
 
     fetchData();

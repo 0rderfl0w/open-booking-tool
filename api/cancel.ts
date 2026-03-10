@@ -167,26 +167,28 @@ export default async function handler(
       cancellation_reason: sanitizedReason,
     };
 
-    sendCancellationEmail(bookingForEmail.guest_email, { booking: bookingForEmail as unknown as Booking, sessionType: sessionTypeData as unknown as SessionType, practitioner: practitionerData as unknown as Practitioner }).catch((err) => {
-      console.error('[Cancel] Failed to send cancellation email:', err);
-    });
-
-    // Delete Google Calendar event (async - don't block response)
     const practitionerId = practitionerData.id;
     const googleEventId = (booking as unknown as { google_event_id: string | null }).google_event_id;
-    if (googleEventId) {
-      deleteCalendarEvent(practitionerId, googleEventId, supabase).catch((err) => {
-        console.error('[Google Calendar] Failed to delete event:', err);
-      });
-    }
-
-    // Delete Apple Calendar event (async - don't block response)
     const appleEventId = (booking as unknown as { apple_event_id: string | null }).apple_event_id;
-    if (appleEventId) {
-      deleteAppleCalendarEvent(practitionerId, appleEventId, supabase).catch((err) => {
-        console.error('[Apple Calendar] Failed to delete event:', err);
-      });
+
+    const sideEffects: Promise<unknown>[] = [];
+    sideEffects.push(
+      sendCancellationEmail(bookingForEmail.guest_email, { booking: bookingForEmail as unknown as Booking, sessionType: sessionTypeData as unknown as SessionType, practitioner: practitionerData as unknown as Practitioner })
+        .catch((err) => console.error('[Cancel] Failed to send email:', err))
+    );
+    if (googleEventId) {
+      sideEffects.push(
+        deleteCalendarEvent(practitionerId, googleEventId, supabase)
+          .catch((err) => console.error('[Google Calendar] Failed to delete:', err))
+      );
     }
+    if (appleEventId) {
+      sideEffects.push(
+        deleteAppleCalendarEvent(practitionerId, appleEventId, supabase)
+          .catch((err) => console.error('[Apple Calendar] Failed to delete:', err))
+      );
+    }
+    await Promise.all(sideEffects);
   }
 
   return apiResponse(res, 200, {

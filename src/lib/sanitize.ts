@@ -1,14 +1,21 @@
-import DOMPurify from 'isomorphic-dompurify';
-
 /**
  * Sanitize user-provided text to prevent XSS.
- * Strips HTML tags and control characters.
+ * Server-safe: no DOM dependency.
  */
 export function sanitizeText(input: string | undefined | null): string {
   if (!input) return '';
   
   // Strip HTML tags
-  let sanitized = DOMPurify.sanitize(input, { ALLOWED_TAGS: [] });
+  let sanitized = input.replace(/<[^>]*>/g, '');
+  
+  // Decode common HTML entities
+  sanitized = sanitized
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;/g, "'")
+    .replace(/&#x2F;/g, '/');
   
   // Strip control characters
   sanitized = sanitized.replace(/[\x00-\x1F]/g, '');
@@ -18,12 +25,9 @@ export function sanitizeText(input: string | undefined | null): string {
 
 /**
  * Sanitize HTML (allow some tags for rich text fields).
+ * For server-side: strips all tags since we can't safely whitelist without a DOM parser.
  */
 export function sanitizeHtml(input: string | undefined | null): string {
   if (!input) return '';
-  
-  return DOMPurify.sanitize(input, {
-    ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'ol', 'li'],
-    ALLOWED_ATTR: ['href', 'target', 'rel'],
-  });
+  return sanitizeText(input);
 }

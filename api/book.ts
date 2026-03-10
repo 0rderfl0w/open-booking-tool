@@ -8,7 +8,7 @@ import { createAppleCalendarEvent } from '../src/lib/apple-calendar';
 import type { Booking, SessionType, Practitioner } from '../src/types/database';
 
 // Initialize Supabase client
-const supabaseUrl = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? '';
+const supabaseUrl = process.env.SUPABASE_URL ?? process.env.PUBLIC_SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -165,44 +165,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // 8. Send confirmation emails (async - don't wait)
+    // 8. Send confirmation emails + calendar events (await before response)
     const appUrl = process.env.APP_URL || '';
-    
-    // Send guest confirmation email
-    sendConfirmationEmail(booking.guest_email, { booking, sessionType, practitioner }).catch((err) => {
-      console.error('Failed to send confirmation email:', err);
-    });
 
-    // Send practitioner notification email
-    sendPractitionerNotificationEmail(practitioner.email, { booking, sessionType, practitioner }).catch((err) => {
-      console.error('Failed to send practitioner notification:', err);
-    });
-
-    // 9. Create Google Calendar event (async - don't block response)
+    const sideEffects: Promise<unknown>[] = [];
+    sideEffects.push(
+      sendConfirmationEmail(booking.guest_email, { booking, sessionType, practitioner })
+        .catch((err) => console.error('Failed to send confirmation email:', err))
+    );
+    sideEffects.push(
+      sendPractitionerNotificationEmail(practitioner.email, { booking, sessionType, practitioner })
+        .catch((err) => console.error('Failed to send practitioner notification:', err))
+    );
     if (practitioner.google_calendar_connected) {
-      createCalendarEvent(
-        practitioner.id,
-        booking as Booking,
-        sessionType as SessionType,
-        practitioner as Practitioner,
-        supabase,
-      ).catch((err) => {
-        console.error('[Google Calendar] Failed to create event:', err);
-      });
+      sideEffects.push(
+        createCalendarEvent(
+          practitioner.id,
+          booking as Booking,
+          sessionType as SessionType,
+          practitioner as Practitioner,
+          supabase,
+        ).catch((err) => console.error('[Google Calendar] Failed:', err))
+      );
     }
-
-    // 10. Create Apple Calendar event (async - don't block response)
     if (practitioner.apple_calendar_connected) {
-      createAppleCalendarEvent(
-        practitioner.id,
-        booking as Booking,
-        sessionType as SessionType,
-        practitioner as Practitioner,
-        supabase,
-      ).catch((err) => {
-        console.error('[Apple Calendar] Failed to create event:', err);
-      });
+      sideEffects.push(
+        createAppleCalendarEvent(
+          practitioner.id,
+          booking as Booking,
+          sessionType as SessionType,
+          practitioner as Practitioner,
+          supabase,
+        ).catch((err) => console.error('[Apple Calendar] Failed:', err))
+      );
     }
+    await Promise.all(sideEffects);
 
     // 11. Return success
     return res.status(201).json({

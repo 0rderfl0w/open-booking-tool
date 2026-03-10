@@ -55,20 +55,26 @@ export default function DashboardSessions() {
 
     async function fetchSessions() {
       setLoading(true);
-      const { data, error: fetchError } = await supabase
-        .from('session_types')
-        .select('*')
-        .eq('practitioner_id', practitioner!.id)
-        .order('is_active', { ascending: false })
-        .order('sort_order', { ascending: true })
-        .order('created_at', { ascending: true });
+      try {
+        const { data, error: fetchError } = await supabase
+          .from('session_types')
+          .select('*')
+          .eq('practitioner_id', practitioner!.id)
+          .order('is_active', { ascending: false })
+          .order('sort_order', { ascending: true })
+          .order('created_at', { ascending: true });
 
-      if (fetchError) {
-        setError(fetchError.message);
-      } else {
-        setSessions(data ?? []);
+        if (fetchError) {
+          setError(fetchError.message);
+        } else {
+          setSessions(data ?? []);
+        }
+      } catch (err) {
+        console.error('Failed to load session types:', err);
+        setError('Failed to load session types');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
 
     fetchSessions();

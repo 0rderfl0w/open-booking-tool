@@ -54,7 +54,8 @@ export default async function handler(
 
   const { error: credError } = await supabase
     .from('practitioner_credentials')
-    .update({
+    .upsert({
+      practitioner_id: practitionerId,
       apple_caldav_username: username,
       apple_caldav_password: password,
       apple_caldav_server_url: result.serverUrl,
@@ -62,8 +63,7 @@ export default async function handler(
       apple_cb_failures: 0,
       apple_cb_first_failure_at: null,
       apple_last_auth_error_at: null,
-    })
-    .eq('practitioner_id', practitionerId);
+    }, { onConflict: 'practitioner_id' });
 
   if (credError) {
     console.error('[Apple Connect] Failed to save credentials:', credError);

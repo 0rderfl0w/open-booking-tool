@@ -87,7 +87,7 @@ export default function DashboardSettings() {
         .from('practitioner_credentials')
         .select('apple_last_auth_error_at, apple_calendars_json')
         .eq('practitioner_id', practitioner.id)
-        .single();
+        .maybeSingle();
 
       if (creds?.apple_last_auth_error_at) {
         setAppleAuthError(true);
@@ -405,6 +405,7 @@ export default function DashboardSettings() {
               <option value="America/Chicago">Central Time</option>
               <option value="America/Denver">Mountain Time</option>
               <option value="America/Los_Angeles">Pacific Time</option>
+              <option value="Europe/Lisbon">Porto / Lisbon</option>
               <option value="Europe/London">London</option>
               <option value="Europe/Paris">Paris</option>
               <option value="Europe/Berlin">Berlin</option>

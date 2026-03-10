@@ -16,6 +16,9 @@ export interface Practitioner {
   google_calendar_connected: boolean;
   apple_calendar_connected: boolean;
   email_reminders_enabled: boolean;
+  website: string | null;
+  linkedin_url: string | null;
+  twitter_url: string | null;
   created_at: string;
   updated_at: string;
 }

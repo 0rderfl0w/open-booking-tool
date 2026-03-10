@@ -18,7 +18,6 @@
     "date-fns": "^2.30.0",
     "date-fns-tz": "^2.0.1",
     "ical-generator": "^8.0.0",
-    "isomorphic-dompurify": "^2.20.0",
     "nanoid": "^5.1.2",
     "node-ical": "^0.25.4",
     "react": "^19.0.0",

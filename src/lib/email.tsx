@@ -13,9 +13,13 @@ import {
 } from '../../emails';
 import type { Booking, SessionType, Practitioner } from '../types/database';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+function getResend(): Resend {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) throw new Error('RESEND_API_KEY is not set');
+  return new Resend(key);
+}
 
-const FROM_EMAIL = 'Build to Own Club <noreply@buildtoown.club>';
+const FROM_EMAIL = process.env.FROM_EMAIL || 'Bookings <noreply@example.com>';
 
 export interface EmailBookingData {
   booking: Booking;
@@ -32,7 +36,7 @@ export interface DigestEmailData {
 export async function sendConfirmationEmail(to: string, data: EmailBookingData) {
   const { booking, sessionType, practitioner } = data;
 
-  const { error } = await resend.emails.send({
+  const { error } = await getResend().emails.send({
     from: FROM_EMAIL,
     to,
     replyTo: practitioner.email,
@@ -52,7 +56,7 @@ export async function sendConfirmationEmail(to: string, data: EmailBookingData) 
 export async function sendCancellationEmail(to: string, data: EmailBookingData) {
   const { booking, sessionType, practitioner } = data;
 
-  const { error } = await resend.emails.send({
+  const { error } = await getResend().emails.send({
     from: FROM_EMAIL,
     to,
     replyTo: practitioner.email,
@@ -72,7 +76,7 @@ export async function sendCancellationEmail(to: string, data: EmailBookingData) 
 export async function sendPractitionerNotificationEmail(to: string, data: EmailBookingData) {
   const { booking, sessionType, practitioner } = data;
 
-  const { error } = await resend.emails.send({
+  const { error } = await getResend().emails.send({
     from: FROM_EMAIL,
     to,
     subject: `New booking: ${sessionType.name} — ${booking.guest_name}`,
@@ -91,7 +95,7 @@ export async function sendPractitionerNotificationEmail(to: string, data: EmailB
 export async function sendReminderEmail(to: string, data: EmailBookingData) {
   const { booking, sessionType, practitioner } = data;
 
-  const { error } = await resend.emails.send({
+  const { error } = await getResend().emails.send({
     from: FROM_EMAIL,
     to,
     replyTo: practitioner.email,
@@ -111,7 +115,7 @@ export async function sendReminderEmail(to: string, data: EmailBookingData) {
 export async function sendDailyDigestEmail(to: string, data: DigestEmailData) {
   const { practitioner, bookings, date } = data;
 
-  const { error } = await resend.emails.send({
+  const { error } = await getResend().emails.send({
     from: FROM_EMAIL,
     to,
     subject: `Your schedule for tomorrow — ${bookings.length} booking${bookings.length !== 1 ? 's' : ''}`,
