@@ -1,3 +1,6 @@
+## 2026-03-10
+- Phase 7 Feature 1: Short booking links — added /book/:sessionSlug and /book/:username/:sessionSlug routes. nameToSlug utility, BookingPage rewrite with async resolution (username-first, then slug, disambiguation for conflicts), README short-link docs (Alex)
+
 ## 2026-02-28
 - Phase 3: Added Apple Calendar settings UI to DashboardSettings.tsx — 3-state UI (disconnected/calendar-picker/connected), auth error banner, risk disclosure, bidirectional sync warning. Created api/apple/connect.ts and api/apple/disconnect.ts (Alex)
 
