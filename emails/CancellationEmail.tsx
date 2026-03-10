@@ -105,6 +105,22 @@ export const cancellationEmailText = (props: CancellationEmailProps): string => 
   const guestTimezone = booking.guest_timezone || 'UTC';
   const zonedStart = utcToZonedTime(new Date(booking.starts_at), guestTimezone);
 
+
+  // Build signature (only include non-empty fields)
+  const socialLinks = [practitioner.website, practitioner.linkedin_url, practitioner.twitter_url]
+    .filter(Boolean)
+    .join('\n');
+  const signature = socialLinks
+    ? `\n---\n${practitioner.display_name}\n${practitioner.email}\n${socialLinks}`
+    : `\n---\n${practitioner.display_name}\n${practitioner.email}`;
+
+  // Build signature (only include non-empty fields)
+  const socialLinks = [practitioner.website, practitioner.linkedin_url, practitioner.twitter_url]
+    .filter(Boolean)
+    .join('\n');
+  const signature = socialLinks
+    ? `\n---\n${practitioner.display_name}\n${practitioner.email}\n${socialLinks}`
+    : `\n---\n${practitioner.display_name}\n${practitioner.email}`;
   return `
 Booking Cancelled
 
@@ -121,6 +137,6 @@ Original Booking Reference: ${booking.booking_token}
 
 ---
 ${practitioner.display_name}
-${practitioner.email}
+${practitioner.email}${signature}
   `.trim();
 };

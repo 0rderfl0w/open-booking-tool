@@ -144,3 +144,6 @@
 - Added Turnstile widget integration for bot protection on booking confirmation
 - All components use Tailwind CSS with mobile-first responsive design
 - Accessibility: focus management, ARIA labels, keyboard navigation, 44x44px touch targets
+
+## 2026-03-10
+- feat: phase 5 — feature 3 cancel route — `/cancel/:token` redirects to `/booking/:token?cancel=true`, auto-opens cancel dialog, fixed broken ReminderEmail cancel link, added cancel link to ConfirmationEmail (Alex)

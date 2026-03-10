@@ -154,6 +154,22 @@ export const reminderEmailText = (props: ReminderEmailProps): string => {
   const zonedEnd = utcToZonedTime(new Date(booking.ends_at), guestTimezone);
   const appUrl = getAppUrl();
 
+
+  // Build signature (only include non-empty fields)
+  const socialLinks = [practitioner.website, practitioner.linkedin_url, practitioner.twitter_url]
+    .filter(Boolean)
+    .join('\n');
+  const signature = socialLinks
+    ? `\n---\n${practitioner.display_name}\n${practitioner.email}\n${socialLinks}`
+    : `\n---\n${practitioner.display_name}\n${practitioner.email}`;
+
+  // Build signature (only include non-empty fields)
+  const socialLinks = [practitioner.website, practitioner.linkedin_url, practitioner.twitter_url]
+    .filter(Boolean)
+    .join('\n');
+  const signature = socialLinks
+    ? `\n---\n${practitioner.display_name}\n${practitioner.email}\n${socialLinks}`
+    : `\n---\n${practitioner.display_name}\n${practitioner.email}`;
   return `
 Reminder: Your ${sessionType.name} with ${practitioner.display_name} is tomorrow
 
@@ -174,6 +190,6 @@ Booking Reference: ${booking.booking_token}
 
 ---
 ${practitioner.display_name}
-${practitioner.email}
+${practitioner.email}${signature}
   `.trim();
 };

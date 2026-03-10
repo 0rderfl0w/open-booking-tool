@@ -22,7 +22,8 @@ export default function App() {
     <AuthProvider>
       <Routes>
         {/* Public routes */}
-        <Route path="/book/:username" element={<BookingPage />} />
+        <Route path="/book/:username/:sessionSlug" element={<BookingPage />} />
+        <Route path="/book/:slugOrUsername" element={<BookingPage />} />
         <Route path="/cancel/:token" element={<CancelRedirect />} />
         <Route path="/booking/:token" element={<BookingConfirmationPage />} />
         <Route path="/embed/:username" element={<EmbedPage />} />

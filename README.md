@@ -14,6 +14,21 @@ Built as part of [Build to Own Club](https://buildtoown.club) — learn to build
 - **Embed widget** — drop your booking page into any website (inline or modal)
 - **ICS calendar invites** — downloadable `.ics` files for every booking
 - **Timezone-aware** — automatic timezone detection for guests
+- **Short booking links** — direct links to specific session types via slug
+
+## Short Booking Links
+
+Clients can book a specific session type directly without navigating through the session picker.
+
+| Format | Example | Behaviour |
+|--------|---------|-----------|
+| `/book/:username` | `/book/alice` | Opens booking page — client picks session type |
+| `/book/:sessionSlug` | `/book/discovery-call` | Resolves slug to session type automatically |
+| `/book/:username/:sessionSlug` | `/book/alice/discovery-call` | Direct link to one practitioner + session type |
+
+Slugs are derived from session type names at runtime: `"Discovery Call"` → `discovery-call`.
+
+> **Known limitation:** If a session type is renamed, existing short links will break. Use the practitioner URL (`/book/:username`) for permanent links.
 
 ## Tech Stack
 
