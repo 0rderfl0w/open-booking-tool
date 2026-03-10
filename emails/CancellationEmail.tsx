@@ -124,11 +124,6 @@ ${booking.cancellation_reason ? `Cancellation reason: ${booking.cancellation_rea
 
 Book another session: ${getAppUrl()}/book/${practitioner.username}
 
-Original Booking Reference: ${booking.booking_token}
-  
-
----
-${practitioner.display_name}
-${practitioner.email}${signature}
+Original Booking Reference: ${booking.booking_token}${signature}
   `.trim();
 };

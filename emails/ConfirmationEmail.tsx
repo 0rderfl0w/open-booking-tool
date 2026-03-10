@@ -194,11 +194,6 @@ View details: ${getAppUrl()}/booking/${booking.booking_token}
 Add to Calendar: ${getAppUrl()}/api/booking/${booking.booking_token}/ics
 Cancel booking: ${getAppUrl()}/cancel/${booking.booking_token}
 
-Booking Reference: ${booking.booking_token}
-  
-
----
-${practitioner.display_name}
-${practitioner.email}${signature}
+Booking Reference: ${booking.booking_token}${signature}
   `.trim();
 };

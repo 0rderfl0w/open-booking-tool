@@ -177,11 +177,6 @@ ${sessionType.description || ''}
 View details: ${appUrl}/booking/${booking.booking_token}
 Cancel booking: ${appUrl}/cancel/${booking.booking_token}
 
-Booking Reference: ${booking.booking_token}
-  
-
----
-${practitioner.display_name}
-${practitioner.email}${signature}
+Booking Reference: ${booking.booking_token}${signature}
   `.trim();
 };
