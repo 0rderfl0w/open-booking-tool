@@ -113,14 +113,6 @@ export const cancellationEmailText = (props: CancellationEmailProps): string => 
   const signature = socialLinks
     ? `\n---\n${practitioner.display_name}\n${practitioner.email}\n${socialLinks}`
     : `\n---\n${practitioner.display_name}\n${practitioner.email}`;
-
-  // Build signature (only include non-empty fields)
-  const socialLinks = [practitioner.website, practitioner.linkedin_url, practitioner.twitter_url]
-    .filter(Boolean)
-    .join('\n');
-  const signature = socialLinks
-    ? `\n---\n${practitioner.display_name}\n${practitioner.email}\n${socialLinks}`
-    : `\n---\n${practitioner.display_name}\n${practitioner.email}`;
   return `
 Booking Cancelled
 
